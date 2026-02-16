@@ -25,12 +25,33 @@
         td code { background: #1a1a2e; color: #00ff88; }
         ul, ol { margin: 1rem 0 1rem 1.5rem; }
         li { margin-bottom: 0.5rem; }
-        .note { background: #e8f4fd; border-left: 4px solid #17a2b8; padding: 1rem; margin: 1rem 0; border-radius: 4px; }
-        .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 1rem; margin: 1rem 0; border-radius: 4px; }
-        .danger { background: #f8d7da; border-left: 4px solid #dc3545; padding: 1rem; margin: 1rem 0; border-radius: 4px; }
-        .success { background: #d4edda; border-left: 4px solid #28a745; padding: 1rem; margin: 1rem 0; border-radius: 4px; }
+        .note, .warning, .danger, .success { border-left: 4px solid; padding: 1rem; margin: 1rem 0; border-radius: 4px; }
+        .note { background: #e8f4fd; border-color: #17a2b8; }
+        .warning { background: #fff3cd; border-color: #ffc107; }
+        .danger { background: #f8d7da; border-color: #dc3545; }
+        .success { background: #d4edda; border-color: #28a745; }
         footer { background: var(--secondary); color: white; padding: 2rem; text-align: center; margin-top: 4rem; }
         footer a { color: var(--primary); }
+
+        /* MOBILE STYLES */
+        @media (max-width: 768px) {
+            header { padding: 2.5rem 1rem; }
+            header h1 { font-size: 1.75rem; }
+            nav .container { flex-direction: column; gap: 0.5rem; text-align: center; }
+            .container { padding: 1rem; }
+            section { padding: 1.5rem; margin: 1.5rem 0; }
+            h2 { font-size: 1.4rem; }
+            h3 { font-size: 1.1rem; }
+            pre { padding: 1rem; font-size: 0.8rem; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            code { font-size: 0.85rem; word-break: break-word; }
+            table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+            th, td { padding: 0.75rem; font-size: 0.9rem; }
+            .note, .warning, .danger, .success { padding: 0.75rem; }
+        }
+        a { -webkit-tap-highlight-color: transparent; }
+        @supports (padding: max(0px)) {
+            .container { padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); }
+        }
     </style>
 </head>
 <body>
@@ -40,7 +61,7 @@
     <div class="container">
         <section>
             <h2>1. Quick Reference Commands</h2>
-            <pre># Docker Stack (in LXC)
+            <pre># Docker Stack
 cd /opt/media-stack && docker compose up -d
 docker compose ps
 docker compose logs -f
@@ -62,8 +83,8 @@ smbclient -L 192.168.86.30 -U mediauser</pre>
                 <tr><th>Step</th><th>Command</th><th>Expected</th></tr>
                 <tr><td>Proxmox running</td><td><code>systemctl status pvedaemon</code></td><td>Active</td></tr>
                 <tr><td>Container running</td><td><code>pct status 100</code></td><td>running</td></tr>
-                <tr><td>Jellyfin accessible</td><td><code>curl http://192.168.86.46:8096</code></td><td>HTML response</td></tr>
-                <tr><td>SAMBA working</td><td><code>smbclient -L 192.168.86.30 -U mediauser</code></td><td>Shares listed</td></tr>
+                <tr><td>Jellyfin accessible</td><td><code>curl http://192.168.86.46:8096</code></td><td>HTML</td></tr>
+                <tr><td>SAMBA working</td><td><code>smbclient -L 192.168.86.30 -U mediauser</code></td><td>Shares</td></tr>
             </table>
         </section>
 
@@ -84,100 +105,17 @@ docker compose up -d</pre>
             <pre>systemctl restart smbd
 testparm
 smbpasswd -a mediauser</pre>
-
-            <h3>ZFS degraded</h3>
-            <pre>zpool status tank
-zpool scrub tank</pre>
         </section>
 
         <section>
-            <h2>4. Reinstalling Apps</h2>
-            <h3>Jellyfin (preserves config)</h3>
-            <pre>cd /opt/media-stack
-docker compose down
-docker compose pull jellyfin
-docker compose up -d</pre>
-            <div class="success">Config preserved at /opt/media-stack/config/jellyfin</div>
-
-            <h3>Complete stack (WARNING: wipes configs)</h3>
-            <div class="danger">Back up configs first!</div>
-            <pre>docker compose down --volumes
-docker system prune -a -f
-docker compose up -d</pre>
-        </section>
-
-        <section>
-            <h2>5. Sonarr Workaround</h2>
-            <div class="note">Sonarr requires privileged container. Install natively on Proxmox host.</div>
-            <pre># On Proxmox host:
-wget "https://services.sonarr.tv/v1/download/main/latest?os=linux&arch=x64" -O /tmp/sonarr.tar.gz
-mkdir -p /opt/sonarr
-tar -xzf /tmp/sonarr.tar.gz -C /opt/sonarr
-
-# Systemd service
-cat > /etc/systemd/system/sonarr.service << 'EOF'
-[Unit]
-Description=Sonarr
-After=network.target
-[Service]
-User=root
-ExecStart=/opt/sonarr/Sonarr -nobrowser -data=/opt/sonarr/data
-Restart=on-failure
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl daemon-reload
-systemctl enable --now sonarr
-
-# Access: http://192.168.86.30:8989</pre>
-        </section>
-
-        <section>
-            <h2>6. Backup & Recovery</h2>
-            <h3>ZFS Snapshots</h3>
-            <pre>zfs snapshot tank/media@backup-$(date +%Y%m%d)
-zfs list -t snapshot
-zfs rollback tank/media@backup-20250215</pre>
-
-            <h3>Jellyfin Config</h3>
-            <pre>tar czf jellyfin-config-$(date +%Y%m%d).tar.gz config/jellyfin/
-scp jellyfin-config-*.tar.gz backup-server:/backups/</pre>
-
-            <h3>Container Backup</h3>
-            <pre>vzdump 100 --mode snapshot --storage local
-pct restore 100 /var/lib/vz/dump/vzdump-lxc-100-*.tar.zst</pre>
-        </section>
-
-        <section>
-            <h2>7. Emergency Recovery</h2>
-            <div class="danger">Complete failure recovery</div>
-            <pre># Hardware check
-lsblk
-df -h
-free -h
-
-# Network
-ping 8.8.8.8
-ping 192.168.86.1
-
-# ZFS
-zpool import
-zpool import tank
-
-# Rebuild container
-pct destroy 100 --force
-# Follow Architecture Guide to recreate</pre>
-        </section>
-
-        <section>
-            <h2>8. Service Locations</h2>
+            <h2>4. Service Locations</h2>
             <table>
                 <tr><th>Service</th><th>URL</th><th>Location</th></tr>
-                <tr><td>Proxmox</td><td><code>https://192.168.86.30:8006</code></td><td>Host</td></tr>
-                <tr><td>Cockpit</td><td><code>https://192.168.86.30:9090</code></td><td>Host</td></tr>
-                <tr><td>Jellyfin</td><td><code>http://192.168.86.46:8096</code></td><td>LXC</td></tr>
-                <tr><td>Sonarr</td><td><code>http://192.168.86.30:8989</code></td><td>Host</td></tr>
+                <tr><td>Proxmox</td><td><code>192.168.86.30:8006</code></td><td>Host</td></tr>
+                <tr><td>Cockpit</td><td><code>192.168.86.30:9090</code></td><td>Host</td></tr>
+                <tr><td>Jellyfin</td><td><code>192.168.86.46:8096</code></td><td>LXC</td></tr>
+                <tr><td>Sonarr</td><td><code>192.168.86.30:8989</code></td><td>Host</td></tr>
+                <tr><td>qBittorrent</td><td><code>192.168.86.46:8080</code></td><td>LXC</td></tr>
                 <tr><td>SAMBA</td><td><code>\\192.168.86.30\media</code></td><td>Host</td></tr>
             </table>
         </section>

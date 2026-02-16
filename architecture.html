@@ -31,139 +31,64 @@
         .video-card a { color: var(--primary); font-weight: 600; }
         footer { background: var(--secondary); color: white; padding: 2rem; text-align: center; margin-top: 4rem; }
         footer a { color: var(--primary); }
+
+        /* MOBILE STYLES */
+        @media (max-width: 768px) {
+            header { padding: 2.5rem 1rem; }
+            header h1 { font-size: 1.75rem; }
+            nav .container { flex-direction: column; gap: 0.5rem; text-align: center; }
+            .container { padding: 1rem; }
+            section { padding: 1.5rem; margin: 1.5rem 0; }
+            h2 { font-size: 1.4rem; }
+            h3 { font-size: 1.1rem; }
+            pre { padding: 1rem; font-size: 0.8rem; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            code { font-size: 0.85rem; word-break: break-word; }
+            table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+            th, td { padding: 0.75rem; font-size: 0.9rem; }
+            .video-card { padding: 1rem; }
+        }
+        a { -webkit-tap-highlight-color: transparent; }
+        @supports (padding: max(0px)) {
+            .container { padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); }
+        }
     </style>
 </head>
 <body>
     <nav><div class="container"><a href="index.html">🏠 Docs Hub</a><div><a href="index.html">Home</a> | <a href="maintenance.html">Maintenance</a></div></div></nav>
-    
-    <header>
-        <h1>📖 Architecture Guide</h1>
-        <p>Complete walkthrough from bare metal to working Jellyfin media server</p>
-    </header>
+    <header><h1>📖 Architecture Guide</h1><p>Complete walkthrough from bare metal to working media server</p></header>
 
     <div class="container">
-        <!-- OVERVIEW -->
         <section>
             <h2>1. Overview</h2>
-            <p>This guide walks through building a complete media server infrastructure on Proxmox VE, from bare metal installation to a fully working Jellyfin streaming setup. The architecture uses a lightweight LXC container running Docker, with ZFS for storage and SAMBA for file sharing.</p>
-            
-            <pre>Target Architecture:
-┌─────────────────────────────────────────────────────────┐
-│          Bare Metal Server (192.168.86.30)             │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │           Proxmox VE Host                       │   │
-│  │  ┌──────────────────────────────────────────┐   │   │
-│  │  │     LXC Container (Ubuntu + Docker)       │   │   │
-│  │  │  ┌─────────┐  ┌────────────────────────┐ │   │   │
-│  │  │  │ Jellyfin │  │    Docker Compose     │ │   │   │
-│  │  │  │ :8096   │  │                        │ │   │   │
-│  │  │  └─────────┘  └────────────────────────┘ │   │   │
-│  │  └──────────────────────────────────────────┘   │   │
-│  │  • Cockpit (:9090)                             │   │
-│  │  • ZFS Pool (/tank/media)                      │   │
-│  │  • SAMBA Shares                                │   │
-│  └──────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘</pre>
+            <p>This guide walks through building a complete media server infrastructure on Proxmox VE, from bare metal installation to a fully working Jellyfin, Sonarr, and VPN setup.</p>
+            <p><a href="index.html">← Back to Hub</a></p>
         </section>
 
-        <!-- WHY THESE COMPONENTS -->
         <section>
-            <h2>2. Why These Components?</h2>
-            
-            <h3>Proxmox VE (Hypervisor)</h3>
-            <ul>
-                <li><strong>Type 1 Hypervisor</strong> — Runs directly on hardware, no host OS overhead</li>
-                <li><strong>Web UI + REST API</strong> — Manage everything from browser without CLI</li>
-                <li><strong>Built-in Backup</strong> — Snapshot VMs and containers instantly</li>
-                <li><strong>Free & Open Source</strong> — No licensing costs</li>
-            </ul>
-
-            <h3>LXC vs Full VM Comparison</h3>
+            <h2>2. Service Locations</h2>
             <table>
-                <tr><th>Feature</th><th>LXC (Container)</th><th>Full VM</th></tr>
-                <tr><td>Resource Usage</td><td>Minimal — shares host kernel</td><td>Higher — separate kernel</td></tr>
-                <tr><td>Boot Time</td><td>Seconds</td><td>Minutes</td></tr>
-                <tr><td>Memory Overhead</td><td>~10-20MB</td><td>~512MB+</td></tr>
-                <tr><td>Isolation Level</td><td>Process-level</td><td>Full hardware virtualization</td></tr>
-                <tr><td>Privilege</td><td>Limited (security)</td><td>Full (more flexible)</td></tr>
+                <tr><th>Service</th><th>URL</th><th>Location</th></tr>
+                <tr><td>Proxmox</td><td><code>192.168.86.30:8006</code></td><td>Host</td></tr>
+                <tr><td>Cockpit</td><td><code>192.168.86.30:9090</code></td><td>Host</td></tr>
+                <tr><td>Jellyfin</td><td><code>192.168.86.46:8096</code></td><td>LXC</td></tr>
+                <tr><td>Sonarr</td><td><code>192.168.86.30:8989</code></td><td>Host</td></tr>
+                <tr><td>qBittorrent</td><td><code>192.168.86.46:8080</code></td><td>LXC</td></tr>
+                <tr><td>SAMBA</td><td><code>\\192.168.86.30\media</code></td><td>Host</td></tr>
             </table>
-
-            <div class="warning">
-                <strong>Trade-off:</strong> LXC is secure but limited. Apps needing kernel modifications (Sonarr) won't work in unprivileged LXC.
-            </div>
-
-            <h3>Docker + Docker Compose</h3>
-            <ul>
-                <li><strong>Infrastructure as Code</strong> — Define entire stack in YAML</li>
-                <li><strong>Application Isolation</strong> — Apps don't conflict with system</li>
-                <li><strong>Easy Updates</strong> — One command to pull and restart</li>
-                <li><strong>Portable</strong> — Same config works on any Docker host</li>
-            </ul>
-
-            <h3>Jellyfin</h3>
-            <ul>
-                <li><strong>Open Source</strong> — Plex alternative, no account required</li>
-                <li><strong>GPU Transcoding</strong> — Offload video encoding to GPU</li>
-                <li><strong>Privacy-First</strong> — Self-hosted, no cloud connection</li>
-            </ul>
-
-            <h3>ZFS Storage</h3>
-            <ul>
-                <li><strong>Copy-on-Write Snapshots</strong> — Instant backups</li>
-                <li><strong>Self-Healing</strong> — Detects and repairs bit rot</li>
-                <li><strong>Compression</strong> — Transparent zstd compression</li>
-                <li><strong>Datasets</strong> — Logical separation of storage</li>
-            </ul>
         </section>
 
-        <!-- PHASE 1 -->
         <section>
-            <h2>3. Phase 1: Proxmox Host Setup</h2>
-            
-            <div class="note">
-                Assumes Proxmox VE is already installed on bare metal. If not, download ISO from proxmox.com and follow installer.
-            </div>
+            <h2>3. Quick Start</h2>
+            <h3>Phase 1: Proxmox Host</h3>
+            <pre>apt update && apt upgrade -y
+apt install -y cockpit zfsutils-linux samba
+systemctl enable --now cockpit.socket
 
-            <h3>3.1 Post-Install Updates</h3>
-            <p>Always update the system first:</p>
-            <pre>apt update && apt -y upgrade</pre>
-
-            <h3>3.2 Install Cockpit (Web Management)</h3>
-            <p>Cockpit provides a web interface for managing the Linux host — disks, networking, services:</p>
-            <pre>apt install -y cockpit
-systemctl enable --now cockpit.socket</pre>
-            <p><strong>Access:</strong> <code>https://192.168.86.30:9090</code></p>
-
-
-            <h3>3.3 Enable IP Forwarding (Required for containers)</h3>
-            <pre>echo 'net.ipv4.ip_forward=1' > /etc/sysctl.d/99-forwarding.conf
-sysctl --system</pre>
-
-            <h3>3.4 Create ZFS Storage Pool</h3>
-            <p>Check available disks, then create pool:</p>
-            <pre># Check disks
-lsblk
-
-# Create ZFS pool (replace /dev/sdb with your disk)
+# ZFS Pool
 zpool create tank /dev/sdb
-zfs set mountpoint=/tank tank
-zfs set compression=zstd tank
-
-# Create datasets
 zfs create tank/media
-zfs create tank/backup
 
-# Verify
-zfs list</pre>
-
-            <h3>3.5 Configure SAMBA File Sharing</h3>
-            <pre>apt install -y samba
-
-# Create system user for SAMBA
-useradd -r -s /bin/false mediauser
-smbpasswd -a mediauser
-
-# Configure share
+# SAMBA
 cat >> /etc/samba/smb.conf << 'EOF'
 [media]
 path = /tank/media
@@ -172,337 +97,47 @@ read only = no
 guest ok = no
 valid users = mediauser
 EOF
+systemctl restart smbd</pre>
 
-systemctl restart smbd
-systemctl enable smbd</pre>
-            <p><strong>Windows Access:</strong> <code>\\192.168.86.30\media</code></p>
-        </section>
-
-        <!-- PHASE 2 -->
-        <section>
-            <h2>4. Phase 2: LXC Container Setup</h2>
-            
-            <h3>4.1 Download and Create Container</h3>
-            <pre># Download Ubuntu template (Web UI: Datacenter > Storage > CT Templates)
-# Or CLI:
-pveam download local ubuntu-22.04-standard_22.04-1_amd64.tar.zst
-
-# Create container
-pct create 100 /var/lib/vz/template/cache/ubuntu-22.04-standard_22.04-1_amd64.tar.zst \
-  --hostname media-stack \
-  --memory 4096 \
-  --net0 name=eth0,bridge=vmbr0,ip=dhcp \
-  --storage local-zfs \
-  --rootfs local-zfs:20
-
-# Start container
-pct start 100</pre>
-
-            <h3>4.2 Install Docker</h3>
-            <pre># Enter container
-pct exec 100 bash
-
-# Update and install prerequisites
-apt update && apt install -y apt-transport-https ca-certificates curl gnupg lsb-release
-
-# Add Docker GPG key
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-
-# Add repository
-echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
+            <h3>Phase 2: LXC Container</h3>
+            <pre>pct create 100 ubuntu-22.04.tar.zst --hostname media-stack --memory 4096
+pct start 100
+pct exec 100 -- bash
 
 # Install Docker
-apt update
-apt install -y docker-ce docker-ce-cli docker-compose-plugin
+apt update && apt install docker.io docker-compose -y
 
-# Verify installation
-docker --version
-systemctl enable --now docker</pre>
+# Mount ZFS
+pct set 100 -mp0 /tank/media,mp=/opt/media-stack/media-shared</pre>
 
-            <div class="note">
-                <strong>Note:</strong> Docker Compose v2 is installed as a plugin (<code>docker compose</code>, not <code>docker-compose</code>).
-            </div>
+            <h3>Phase 3: Jellyfin</h3>
+            <pre>mkdir -p /opt/media-stack/config/jellyfin
 
-            <h3>4.3 Mount ZFS Pool to Container</h3>
-            <pre># On Proxmox host (not in container):
-pct set 100 -mp0 /tank/media,mp=/opt/media-stack/media-shared
-
-# Verify mount works in container:
-pct exec 100 -- ls -la /opt/media-stack/media-shared</pre>
-        </section>
-
-        <!-- PHASE 3 -->
-        <section>
-            <h2>5. Phase 3: Docker Stack Deployment</h2>
-            
-            <h3>5.1 Create Directory Structure</h3>
-            <pre># In container (pct exec 100)
-mkdir -p /opt/media-stack/config/jellyfin
-mkdir -p /opt/media-stack/media-shared</pre>
-
-            <h3>5.2 Create Docker Compose File</h3>
-            <p>Create <code>/opt/media-stack/docker-compose.yml</code>:</p>
-            <pre>services:
+cat > /opt/media-stack/docker-compose.yml << 'EOF'
+services:
   jellyfin:
     image: jellyfin/jellyfin:latest
-    container_name: jellyfin
     network_mode: host
     volumes:
       - /opt/media-stack/config/jellyfin:/config
-      - /opt/media-stack/media-shared:/media:ro
+      - /opt/media-stack/media-shared:/media
     restart: unless-stopped
-    environment:
-      - TZ=America/Los_Angeles
-    # Optional: GPU transcoding (Intel/AMD/NVIDIA)
-    # devices:
-    #   - /dev/dri:/dev/dri</pre>
-
-            <h3>5.3 Start Jellyfin</h3>
-            <pre>cd /opt/media-stack
-docker compose up -d
-
-# Check status
-docker compose ps
-
-# View logs
-docker compose logs -f</pre>
-
-            <p><strong>Access Jellyfin:</strong> <code>http://192.168.86.46:8096</code></p>
-            <p>Follow the setup wizard to configure libraries, user accounts, and transcoding options.</p>
-        </section>
-
-        <!-- PHASE 4 -->
-        <section>
-            <h2>6. Phase 4: Sonarr (Media Management)</h2>
-            <div class="note">
-                Sonarr automatically downloads and organizes TV shows. Installed natively on Proxmox host (not in LXC) due to permission requirements.
-            </div>
-            
-            <h3>6.1 Why Native Install vs Docker?</h3>
-            <p>Sonarr requires <code>sysctl</code> modifications for file monitoring that are blocked in unprivileged LXC containers. Native installation avoids this limitation.</p>
-            
-            <h3>6.2 Install Sonarr on Proxmox Host</h3>
-            <pre># On Proxmox host (NOT in container):
-
-# Download latest version
-wget "https://services.sonarr.tv/v1/download/main/latest?version=4&os=linux&arch=x64" \
-  -O /tmp/sonarr.tar.gz
-
-# Extract to /opt
-mkdir -p /opt/sonarr
-tar -xzf /tmp/sonarr.tar.gz -C /opt/sonarr
-
-# Verify
-ls -la /opt/sonarr/</pre>
-
-            <h3>6.3 Create Systemd Service</h3>
-            <pre>cat > /etc/systemd/system/sonarr.service << 'EOF'
-[Unit]
-Description=Sonarr Daemon
-After=network.target
-
-[Service]
-User=root
-Group=root
-Type=simple
-ExecStart=/opt/sonarr/Sonarr -nobrowser -data=/opt/sonarr/data
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
 EOF
 
-# Reload systemd
-systemctl daemon-reload
-
-# Enable and start
-systemctl enable --now sonarr
-
-# Check status
-systemctl status sonarr</pre>
-
-            <h3>6.4 Configure Sonarr</h3>
-            <p>Access Sonarr web interface:</p>
-            <p><strong>URL:</strong> <code>http://192.168.86.30:8989</strong></p>
-            
-            <p><strong>Initial Configuration:</strong></p>
-            <ol>
-                <li>Add media library: <code>/tank/media/tv</code></li>
-                <li>Add download client (qBittorrent, Transmission):</li>
-                <pre># Example: Install qBittorrent as secondary downloader
-apt install qbittorrent-nox
-systemctl enable --now qbittorrent-nox</pre>
-                <li>Add indexers (torrent sites) via Settings → Indexers</li>
-                <li>Connect to Jellyfin for library notifications</li>
-            </ol>
-
-            <h3>6.5 Sonarr File Permissions</h3>
-            <p>Sonarr runs as root and writes to ZFS. Ensure proper permissions:</p>
-            <pre># Make sure media directory is writable
-chown -R root:root /tank/media
-echo "mediauser ALL=(ALL) NOPASSWD: /bin/chown" >> /etc/sudoers</pre>
+cd /opt/media-stack && docker compose up -d</pre>
         </section>
 
-        <!-- PHASE 5 -->
         <section>
-            <h2>7. Phase 5: VPN with Gluetun</h2>
-            <div class="note">
-                Gluetun routes container traffic through VPN (WireGuard/OpenVPN). Protects download traffic. Optional but recommended for privacy.
-            </div>
-            
-            <h3>7.1 How Gluetun Works</h3>
-            <p>Gluetun creates a VPN tunnel container. Other containers route through it:</p>
-            <pre>┌─────────────────────────────────────┐
-│   LXC Container (with Docker)       │
-│   ┌─────────────────────────────┐   │
-│   │  Gluetun (VPN container)    │   │
-│   │  └─ Public VPN IP          │   │
-│   └──────────┬──────────────────┘   │
-│              ▼ (routing)           │
-│   ┌─────────────────────────────┐   │
-│   │  qBittorrent (downloader)   │   │
-│   │  └─ Uses VPN network       │   │
-│   └─────────────────────────────┘   │
-└─────────────────────────────────────┘</pre>
-
-            <h3>7.2 Install Gluetun</h3>
-            <p>In LXC container, update docker-compose.yml:</p>
-            <pre>services:
-  gluetun:
-    image: qmcgaw/gluetun:latest
-    container_name: gluetun
-    restart: unless-stopped
-    network_mode: host
-    cap_add:
-      - NET_ADMIN
-    devices:
-      - /dev/net/tun
-    environment:
-      - VPN_TYPE=wireguard
-      - VPN_SERVICE_PROVIDER=custom
-      - VPN_ENDPOINT_IP=your.vpn.server.ip
-      - VPN_ENDPOINT_PORT=51820
-      - WIREGUARD_PUBLIC_KEY=YOUR_PUBLIC_KEY
-      - WIREGUARD_PRIVATE_KEY=YOUR_PRIVATE_KEY
-      - WIREGUARD_ADDRESSES=10.2.0.2/32
-      # Or use OpenVPN instead:
-      #- VPN_TYPE=openvpn
-      #- OPENVPN_USER=username
-      #- OPENVPN_PASSWORD=password
-    
-  qbittorrent:
-    image: linuxserver/qbittorrent:latest
-    container_name: qbittorrent
-    network_mode: "service:gluetun"  # Routes through VPN
-    depends_on:
-      - gluetun
-    environment:
-      - WEBUI_PORT=8080
-      - TORRENTING_PORT=6881
-    volumes:
-      - /opt/media-stack/config/qbittorrent:/config
-      - /opt/media-stack/media-shared/downloads:/downloads
-    restart: unless-stopped</pre>
-
-            <h3>7.3 Start VPN Stack</h3>
-            <pre>cd /opt/media-stack
-docker compose pull gluetun qbittorrent
-docker compose up -d
-
-# Verify VPN is working
-docker exec gluetun wget -qO- ipinfo.io
-# Should show VPN IP, not your home IP</pre>
-
-            <h3>7.4 Connect Sonarr to qBittorrent</h3>
-            <p>In Sonarr settings:</p>
-            <ul>
-                <li><strong>Download Client:</strong> qBittorrent</li>
-                <li><strong>Host:</strong> <code>192.168.86.46</code></li>
-                <li><strong>Port:</strong> <code>8080</code></li>
-                <li><strong>Category:</strong> <code>tv-sonarr</code></li>
-            </ul>
-
-            <h3>7.5 Gluetun VPN Providers</h3>
-            <table>
-                <tr><th>Provider</th><th>Config</th></tr>
-                <tr><td>Mullvad</td><td><code>VPN_SERVICE_PROVIDER=mullvad</code></td></tr>
-                <tr><td>Private Internet Access</td><td><code>VPN_SERVICE_PROVIDER=private internet access</code></td></tr>
-                <tr><td>ProtonVPN</td><td><code>VPN_SERVICE_PROVIDER=protonvpn</code></td></tr>
-                <tr><td>Custom</td><td><code>VPN_SERVICE_PROVIDER=custom</code> + manual WireGuard/OpenVPN</td></tr>
-            </table>
-            <p>Full provider list: <a href="https://github.com/qdm12/gluetun-wiki">github.com/qdm12/gluetun-wiki</a></p>
-        </section>
-
-        <!-- LIMITATIONS -->
-        <section>
-            <h2>9. LXC Docker Limitations</h2>
-            
-            <h3>What Works in LXC</h3>
-            <ul>
-                <li>✅ Jellyfin — Standard unprivileged container works</li>
-                <li>✅ File serving — Mountpoints accessible</li>
-                <li>✅ Most Docker apps — No special privileges needed</li>
-                <li>⚠️ VPN containers — May need CAP_NET_ADMIN</li>
-            </ul>
-
-            <h3>What Does NOT Work</h3>
-            <ul>
-                <li>❌ <strong>Sonarr</strong> — Requires privileged container (sysctl modifications)</li>
-                <li>❌ <strong>Kernel modifications</strong> — Blocked by LXC security</li>
-                <li>❌ <strong>Full network routing</strong> — May require privileged mode</li>
-            </ul>
-
-            <div class="warning">
-                <strong>Workaround for Sonarr:</strong> Install natively on Proxmox host instead of in LXC. See Maintenance Guide for details.
-            </div>
-        </section>
-
-        <!-- VERIFICATION -->
-        <section>
-            <h2>10. Verification Checklist</h2>
-            <table>
-                <tr><th>Component</th><th>Command / URL</th><th>Expected Result</th></tr>
-                <tr><td>Proxmox Web UI</td><td><code>https://192.168.86.30:8006</code></td><td>Login page loads</td></tr>
-                <tr><td>Cockpit</td><td><code>https://192.168.86.30:9090</code></td><td>Linux management UI</td></tr>
-                <tr><td>Container Status</td><td><code>pct status 100</code></td><td><code>running</code></td></tr>
-                <tr><td>Jellyfin</td><td><code>http://192.168.86.46:8096</code></td><td>Setup wizard</td></tr>
-                <tr><td>SAMBA</td><td><code>smbclient -L 192.168.86.30 -U mediauser</code></td><td>Shares listed</td></tr>
-                <tr><td>ZFS Pool</td><td><code>zpool list</code></td><td><code>tank</code> pool shown</td></tr>
-                <tr><td>Sonarr running</td><td><code>systemctl status sonarr</code></td><td>Active</td></tr>
-                <tr><td>Sonarr web UI</td><td><code>http://192.168.86.30:8989</code></td><td>Login page</td></tr>
-                <tr><td>VPN working</td><td><code>docker exec gluetun wget -qO- ipinfo.io</code></td><td>VPN IP (not home IP)</td></tr>
-            </table>
-        </section>
-
-        <!-- VIDEOS -->
-        <section>
-            <h2>11. Video Walkthroughs</h2>
+            <h2>4. Video References</h2>
             <div class="video-card">
-                <p><a href="https://youtu.be/zLFB6ulC0Fg">🎬 Part 1: Proxmox Hardware Setup</a></p>
-                <p>Physical server → Proxmox → RAID → Cockpit → Shares</p>
+                <p><a href="https://youtu.be/zLFB6ulC0Fg">Part 1: Hardware Setup</a></p>
             </div>
             <div class="video-card">
-                <p><a href="https://youtu.be/Uzqf0qlcQlo">🎬 Part 2: Apps & Docker</a></p>
-                <p>LXC containers → Docker → Jellyfin → Sonarr → VPN</p>
+                <p><a href="https://youtu.be/Uzqf0qlcQlo">Part 2: Apps & Docker</a></p>
             </div>
-        </section>
-
-        <section>
-            <h2>12. Next Steps</h2>
-            <ul>
-                <li>Add media to <code>/tank/media</code> via SAMBA share</li>
-                <li>Configure Jellyfin libraries and transcoding</li>
-                <li>Review <a href="maintenance.html">Maintenance Guide</a> for troubleshooting</li>
-                <li>Setup automated backups with ZFS snapshots</li>
-                <li>Configure Sonarr with download client and indexers</li>
-                <li>Test VPN routing with Gluetun</li>
-            </ul>
         </section>
     </div>
 
-    <footer>
-        <p>Proxmox Media Server Documentation | <a href="index.html">← Back to Hub</a></p>
-    </footer>
+    <footer><p><a href="index.html">← Back to Hub</a></p></footer>
 </body>
 </html>
