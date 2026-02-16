@@ -12,7 +12,6 @@
             --secondary: #1a1a2e;
             --accent: #16213e;
             --text: #333;
-            --text-light: #666;
             --bg: #f8f9fa;
             --card: #ffffff;
         }
@@ -20,150 +19,258 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             line-height: 1.6;
             color: var(--text);
-            background: linear-gradient(135deg, var(--bg) 0%, #e8e8e8 100%);
+            background: var(--bg);
         }
+        
         header {
             background: linear-gradient(135deg, var(--secondary) 0%, var(--accent) 100%);
             color: white;
-            padding: 3rem 1rem;
+            padding: 4rem 2rem;
+            text-align: center;
         }
-        .container { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; }
-        header h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
-        header p { max-width: 600px; opacity: 0.9; }
-        
-        .architecture {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 12px;
-            margin: 2rem 0;
-            border-left: 4px solid var(--primary);
+        header h1 { 
+            font-size: 2.5rem; 
+            margin-bottom: 0.5rem;
         }
-        .architecture pre {
-            font-family: monospace;
-            font-size: 0.9rem;
-            overflow-x: auto;
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
         }
         
-        .grid {
+        .container { max-width: 1000px; margin: 0 auto; padding: 0 2rem; }
+        
+        /* Main Navigation Cards */
+        .nav-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
+            gap: 2rem;
             padding: 3rem 0;
         }
-        .card {
+        
+        .nav-card {
             background: var(--card);
             border-radius: 16px;
-            padding: 2rem;
+            padding: 2.5rem;
             box-shadow: 0 4px 6px rgba(0,0,0,0.07);
             transition: all 0.3s ease;
+            border: 2px solid transparent;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
         }
-        .card:hover {
+        
+        .nav-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+            border-color: var(--primary);
         }
-        .card h2 { color: var(--secondary); margin: 1rem 0; }
-        .badge {
-            display: inline-block;
-            background: #28a745;
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
+        
+        .nav-card .icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
         }
-        .btn {
+        
+        .nav-card h2 {
+            color: var(--secondary);
+            font-size: 1.75rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .nav-card p {
+            color: #666;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+        
+        .nav-card .badge {
             display: inline-block;
             background: var(--primary);
             color: white;
-            padding: 0.875rem 1.5rem;
-            border-radius: 8px;
-            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
             font-weight: 600;
-            margin-top: 1rem;
         }
         
-        .videos {
+        .nav-card.architecture .badge { background: #28a745; }
+        .nav-card.maintenance .badge { background: var(--primary); }
+        
+        /* Architecture Preview */
+        .preview {
+            background: #1a1a2e;
+            color: #00ff88;
+            padding: 1.5rem;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            margin: 2rem 0;
+            overflow-x: auto;
+        }
+        
+        /* Video Section */
+        .video-section {
             background: var(--secondary);
             color: white;
             padding: 3rem 0;
+            margin: 2rem 0;
         }
-        .videos h2 { text-align: center; margin-bottom: 2rem; }
+        .video-section h2 { text-align: center; margin-bottom: 2rem; }
         .video-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 1.5rem;
         }
         .video-card {
             background: rgba(255,255,255,0.1);
-            border-radius: 12px;
             padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.2);
         }
-        .video-card a { color: var(--primary); font-weight: 600; text-decoration: none; }
+        .video-card a { color: var(--primary); text-decoration: none; font-weight: 600; }
+        .video-card p { margin-top: 0.5rem; opacity: 0.8; }
+        
+        /* Quick Links */
+        .quick-links {
+            padding: 2rem 0;
+        }
+        .quick-links h3 {
+            color: var(--secondary);
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+        .links-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        .link-item {
+            background: var(--card);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 3px solid var(--primary);
+        }
+        .link-item strong {
+            display: block;
+            color: var(--secondary);
+            margin-bottom: 0.25rem;
+        }
+        .link-item code {
+            background: #1a1a2e;
+            color: #00ff88;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
         
         footer {
             background: var(--secondary);
             color: white;
             padding: 2rem;
             text-align: center;
-            margin-top: 3rem;
         }
-        a { color: var(--primary); }
+        footer a { color: var(--primary); }
+        
+        @media (max-width: 600px) {
+            header h1 { font-size: 1.75rem; }
+            .nav-card { padding: 1.5rem; }
+        }
     </style>
 </head>
 <body>
     <header>
-        <div class="container">
-            <h1>Proxmox Media Server</h1>
-            <p>Complete documentation for building production-ready home media infrastructure</p>
-        </div>
+        <h1>🏠 Proxmox Media Server</h1>
+        <p>Complete documentation for building a production-ready home media infrastructure</p>
     </header>
 
-    <main class="container">
-        <div class="architecture">
-            <pre>Architecture Overview
-├── Proxmox Host (192.168.86.30)
-│   ├── Cockpit Web UI (:9090)
-│   ├── ZFS Pool (/tank/media)
-│   ├── SAMBA Shares
-│   └── LXC Container (ID 100)
-│       ├── Docker Engine
-│       ├── Jellyfin (:8096)
-│       └── Docker Compose</pre>
+    <div class="container">
+        <!-- Architecture Preview -->
+        <div class="preview">
+┌─────────────────────────────────────────────────────────┐
+│           Proxmox Host (192.168.86.30)                 │
+│  ┌─────────────────────────────────────────────────┐  │
+│  │  • Cockpit (:9090)  • ZFS (/tank/media)        │  │
+│  │  • SAMBA Shares  • Sonarr (:8989)              │  │
+│  │                                                 │  │
+│  │  ┌─────────────────────────────────────────┐   │  │
+│  │  │     LXC Container (Ubuntu + Docker)      │   │  │
+│  │  │  • Jellyfin (:8096)  • qBittorrent      │   │  │
+│  │  │  • Gluetun VPN  • Docker Compose        │   │  │
+│  │  └─────────────────────────────────────────┘   │  │
+│  └─────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
         </div>
 
-        <div class="grid">
-            <div class="card">
-                <span class="badge">Fresh Install</span>
-                <h2>📖 Architecture Guide</h2>
-                <p>Step-by-step from bare metal to working Jellyfin. Learn why each component was chosen.</p>
-                <a href="architecture.html" class="btn">View Guide →</a>
-            </div>
-            <div class="card">
-                <span class="badge" style="background: var(--primary)">Maintenance</span>
-                <h2>🔧 Maintenance Guide</h2>
-                <p>Quick reference for fixing broken components and troubleshooting.</p>
-                <a href="maintenance.html" class="btn">View Guide →</a>
-            </div>
+        <!-- Main Navigation -->
+        <div class="nav-grid">
+            <a href="architecture.html" class="nav-card architecture">
+                <div class="icon">📖</div>
+                <h2>Architecture Guide</h2>
+                <p>Complete setup walkthrough from bare metal to working Jellyfin, Sonarr, and VPN. 12 comprehensive sections covering Proxmox, LXC, Docker, ZFS, SAMBA, and Gluetun.</p>
+                <span class="badge">Setup →</span>
+            </a>
+            
+            <a href="maintenance.html" class="nav-card maintenance">
+                <div class="icon">🔧</div>
+                <h2>Maintenance / Operations</h2>
+                <p>Fix broken components, reinstall apps, troubleshoot common issues. Quick reference commands, verification checklists, backup procedures, and emergency recovery.</p>
+                <span class="badge">Fix →</span>
+            </a>
         </div>
 
-        <div class="videos">
-            <div class="container">
-                <h2>📺 Video References</h2>
-                <div class="video-grid">
-                    <div class="video-card">
-                        <a href="https://youtu.be/zLFB6ulC0Fg">Part 1: Hardware Setup</a>
-                        <p>Proxmox, RAID, Cockpit, Shares</p>
-                    </div>
-                    <div class="video-card">
-                        <a href="https://youtu.be/Uzqf0qlcQlo">Part 2: Apps & Docker</a>
-                        <p>Jellyfin, Sonarr, Gluetun</p>
-                    </div>
+        <!-- Quick Links -->
+        <div class="quick-links">
+            <h3>🔗 Quick Access</h3>
+            <div class="links-grid">
+                <div class="link-item">
+                    <strong>Proxmox UI</strong>
+                    <code>192.168.86.30:8006</code>
+                </div>
+                <div class="link-item">
+                    <strong>Cockpit</strong>
+                    <code>192.168.86.30:9090</code>
+                </div>
+                <div class="link-item">
+                    <strong>Jellyfin</strong>
+                    <code>192.168.86.46:8096</code>
+                </div>
+                <div class="link-item">
+                    <strong>Sonarr</strong>
+                    <code>192.168.86.30:8989</code>
+                </div>
+                <div class="link-item">
+                    <strong>qBittorrent</strong>
+                    <code>192.168.86.46:8080</code>
+                </div>
+                <div class="link-item">
+                    <strong>SAMBA</strong>
+                    <code>\\192.168.86.30\media</code>
                 </div>
             </div>
         </div>
-    </main>
+    </div>
+
+    <!-- Video Section -->
+    <div class="video-section">
+        <div class="container">
+            <h2>📺 Video Walkthroughs</h2>
+            <div class="video-grid">
+                <div class="video-card">
+                    <p><a href="https://youtu.be/zLFB6ulC0Fg">Part 1: Hardware Setup</a></p>
+                    <p>Proxmox • RAID • Cockpit • Shares</p>
+                </div>
+                <div class="video-card">
+                    <p><a href="https://youtu.be/Uzqf0qlcQlo">Part 2: Apps & Docker</a></p>
+                    <p>Jellyfin • Sonarr • VPN • Gluetun</p>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <footer>
-        <p>Last updated: 2026-02-15</p>
+        <p>Last updated: 2026-02-15 | <a href="https://github.com/codetimehim/homeserver-docs">View on GitHub</a></p>
     </footer>
 </body>
 </html>
