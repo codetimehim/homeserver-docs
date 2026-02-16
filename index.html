@@ -173,10 +173,71 @@
         }
         footer a { color: var(--primary); }
         
-        @media (max-width: 600px) {
-            header h1 { font-size: 1.75rem; }
-            .nav-card { padding: 1.5rem; }
-        }
+        /* Mobile Optimizations */
+@media (max-width: 768px) {
+    header {
+        padding: 2.5rem 1rem;
+    }
+    header h1 { 
+        font-size: 1.6rem; 
+    }
+    header p {
+        font-size: 1rem;
+    }
+    .container {
+        padding: 0 1rem;
+    }
+    .nav-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        padding: 1.5rem 0;
+    }
+    .nav-card {
+        padding: 1.5rem;
+    }
+    .nav-card .icon {
+        font-size: 2.5rem;
+    }
+    .nav-card h2 {
+        font-size: 1.4rem;
+    }
+    .preview {
+        font-size: 0.75rem;
+        padding: 1rem;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .links-grid {
+        grid-template-columns: 1fr;
+    }
+    .video-grid {
+        grid-template-columns: 1fr;
+    }
+    .video-section {
+        padding: 2rem 0;
+    }
+}
+
+/* Touch-friendly improvements */
+.nav-card, .link-item, .video-card {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+/* Prevent zoom on input focus for iOS */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+    input, select, textarea {
+        font-size: 16px !important;
+    }
+}
+
+/* Safe area for notched phones */
+@supports (padding: max(0px)) {
+    .container {
+        padding-left: max(1rem, env(safe-area-inset-left));
+        padding-right: max(1rem, env(safe-area-inset-right));
+    }
+}
     </style>
 </head>
 <body>
