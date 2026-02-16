@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance Guide - Proxmox Media Server</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --primary: #e57000; --secondary: #1a1a2e; --text: #333; --bg: #f4f4f4; --card: #fff; --success: #28a745; --warning: #ffc107; --danger: #dc3545; --info: #17a2b8; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; color: var(--text); background: var(--bg); }
+        nav { background: var(--secondary); padding: 1rem; }
+        nav .container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; }
+        nav a { color: white; text-decoration: none; font-weight: 600; }
+        header { background: linear-gradient(135deg, var(--secondary), #16213e); color: white; padding: 4rem 1rem; text-align: center; }
+        header h1 { font-size: 2.5rem; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 2rem; }
+        section { background: var(--card); border-radius: 12px; padding: 2rem; margin: 2rem 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid var(--primary); }
+        h2 { color: var(--secondary); border-bottom: 3px solid var(--primary); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h3 { color: var(--secondary); margin: 2rem 0 1rem; }
+        pre { background: #1a1a2e; color: #fff; padding: 1.5rem; border-radius: 8px; overflow-x: auto; font-family: monospace; margin: 1rem 0; border-left: 4px solid var(--primary); }
+        code { background: #e8e8e8; padding: 0.2rem 0.4rem; border-radius: 4px; font-family: monospace; }
+        table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
+        th, td { padding: 1rem; border: 1px solid #ddd; text-align: left; }
+        th { background: var(--secondary); color: white; }
+        td code { background: #1a1a2e; color: #00ff88; }
+        ul, ol { margin: 1rem 0 1rem 1.5rem; }
+        li { margin-bottom: 0.5rem; }
+        .note { background: #e8f4fd; border-left: 4px solid #17a2b8; padding: 1rem; margin: 1rem 0; border-radius: 4px; }
+        .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 1rem; margin: 1rem 0; border-radius: 4px; }
+        .danger { background: #f8d7da; border-left: 4px solid #dc3545; padding: 1rem; margin: 1rem 0; border-radius: 4px; }
+        .success { background: #d4edda; border-left: 4px solid #28a745; padding: 1rem; margin: 1rem 0; border-radius: 4px; }
+        footer { background: var(--secondary); color: white; padding: 2rem; text-align: center; margin-top: 4rem; }
+        footer a { color: var(--primary); }
+    </style>
+</head>
+<body>
+    <nav><div class="container"><a href="index.html">🏠 Docs Hub</a><div><a href="index.html">Home</a> | <a href="architecture.html">Architecture</a></div></div></nav>
+    <header><h1>🔧 Maintenance Guide</h1><p>Fix issues, reinstall apps, and recover from failures</p></header>
+
+    <div class="container">
+        <section>
+            <h2>1. Quick Reference Commands</h2>
+            <pre># Docker Stack (in LXC)
+cd /opt/media-stack && docker compose up -d
+docker compose ps
+docker compose logs -f
+
+# LXC Container
+pct status 100
+pct stop 100 && pct start 100
+pct exec 100 -- bash
+
+# Storage
+zfs list
+zpool status tank
+smbclient -L 192.168.86.30 -U mediauser</pre>
+        </section>
+
+        <section>
+            <h2>2. Verification Checklist</h2>
+            <table>
+                <tr><th>Step</th><th>Command</th><th>Expected</th></tr>
+                <tr><td>Proxmox running</td><td><code>systemctl status pvedaemon</code></td><td>Active</td></tr>
+                <tr><td>Container running</td><td><code>pct status 100</code></td><td>running</td></tr>
+                <tr><td>Jellyfin accessible</td><td><code>curl http://192.168.86.46:8096</code></td><td>HTML response</td></tr>
+                <tr><td>SAMBA working</td><td><code>smbclient -L 192.168.86.30 -U mediauser</code></td><td>Shares listed</td></tr>
+            </table>
+        </section>
+
+        <section>
+            <h2>3. Common Fixes</h2>
+            <h3>Container won't start</h3>
+            <pre>journalctl -u pve-container@100
+pct stop 100 && pct start 100 --debug
+zpool status tank</pre>
+
+            <h3>Jellyfin won't load</h3>
+            <pre>docker compose logs jellyfin | tail -50
+docker compose down
+chown -R 1000:1000 config/jellyfin
+docker compose up -d</pre>
+
+            <h3>SAMBA inaccessible</h3>
+            <pre>systemctl restart smbd
+testparm
+smbpasswd -a mediauser</pre>
+
+            <h3>ZFS degraded</h3>
+            <pre>zpool status tank
+zpool scrub tank</pre>
+        </section>
+
+        <section>
+            <h2>4. Reinstalling Apps</h2>
+            <h3>Jellyfin (preserves config)</h3>
+            <pre>cd /opt/media-stack
+docker compose down
+docker compose pull jellyfin
+docker compose up -d</pre>
+            <div class="success">Config preserved at /opt/media-stack/config/jellyfin</div>
+
+            <h3>Complete stack (WARNING: wipes configs)</h3>
+            <div class="danger">Back up configs first!</div>
+            <pre>docker compose down --volumes
+docker system prune -a -f
+docker compose up -d</pre>
+        </section>
+
+        <section>
+            <h2>5. Sonarr Workaround</h2>
+            <div class="note">Sonarr requires privileged container. Install natively on Proxmox host.</div>
+            <pre># On Proxmox host:
+wget "https://services.sonarr.tv/v1/download/main/latest?os=linux&arch=x64" -O /tmp/sonarr.tar.gz
+mkdir -p /opt/sonarr
+tar -xzf /tmp/sonarr.tar.gz -C /opt/sonarr
+
+# Systemd service
+cat > /etc/systemd/system/sonarr.service << 'EOF'
+[Unit]
+Description=Sonarr
+After=network.target
+[Service]
+User=root
+ExecStart=/opt/sonarr/Sonarr -nobrowser -data=/opt/sonarr/data
+Restart=on-failure
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable --now sonarr
+
+# Access: http://192.168.86.30:8989</pre>
+        </section>
+
+        <section>
+            <h2>6. Backup & Recovery</h2>
+            <h3>ZFS Snapshots</h3>
+            <pre>zfs snapshot tank/media@backup-$(date +%Y%m%d)
+zfs list -t snapshot
+zfs rollback tank/media@backup-20250215</pre>
+
+            <h3>Jellyfin Config</h3>
+            <pre>tar czf jellyfin-config-$(date +%Y%m%d).tar.gz config/jellyfin/
+scp jellyfin-config-*.tar.gz backup-server:/backups/</pre>
+
+            <h3>Container Backup</h3>
+            <pre>vzdump 100 --mode snapshot --storage local
+pct restore 100 /var/lib/vz/dump/vzdump-lxc-100-*.tar.zst</pre>
+        </section>
+
+        <section>
+            <h2>7. Emergency Recovery</h2>
+            <div class="danger">Complete failure recovery</div>
+            <pre># Hardware check
+lsblk
+df -h
+free -h
+
+# Network
+ping 8.8.8.8
+ping 192.168.86.1
+
+# ZFS
+zpool import
+zpool import tank
+
+# Rebuild container
+pct destroy 100 --force
+# Follow Architecture Guide to recreate</pre>
+        </section>
+
+        <section>
+            <h2>8. Service Locations</h2>
+            <table>
+                <tr><th>Service</th><th>URL</th><th>Location</th></tr>
+                <tr><td>Proxmox</td><td><code>https://192.168.86.30:8006</code></td><td>Host</td></tr>
+                <tr><td>Cockpit</td><td><code>https://192.168.86.30:9090</code></td><td>Host</td></tr>
+                <tr><td>Jellyfin</td><td><code>http://192.168.86.46:8096</code></td><td>LXC</td></tr>
+                <tr><td>Sonarr</td><td><code>http://192.168.86.30:8989</code></td><td>Host</td></tr>
+                <tr><td>SAMBA</td><td><code>\\192.168.86.30\media</code></td><td>Host</td></tr>
+            </table>
+        </section>
+    </div>
+
+    <footer><p><a href="index.html">← Back to Docs Hub</a></p></footer>
+</body>
+</html>
