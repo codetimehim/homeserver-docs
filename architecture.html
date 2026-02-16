@@ -271,9 +271,172 @@ docker compose logs -f</pre>
             <p>Follow the setup wizard to configure libraries, user accounts, and transcoding options.</p>
         </section>
 
+        <!-- PHASE 4 -->
+        <section>
+            <h2>6. Phase 4: Sonarr (Media Management)</h2>
+            <div class="note">
+                Sonarr automatically downloads and organizes TV shows. Installed natively on Proxmox host (not in LXC) due to permission requirements.
+            </div>
+            
+            <h3>6.1 Why Native Install vs Docker?</h3>
+            <p>Sonarr requires <code>sysctl</code> modifications for file monitoring that are blocked in unprivileged LXC containers. Native installation avoids this limitation.</p>
+            
+            <h3>6.2 Install Sonarr on Proxmox Host</h3>
+            <pre># On Proxmox host (NOT in container):
+
+# Download latest version
+wget "https://services.sonarr.tv/v1/download/main/latest?version=4&os=linux&arch=x64" \
+  -O /tmp/sonarr.tar.gz
+
+# Extract to /opt
+mkdir -p /opt/sonarr
+tar -xzf /tmp/sonarr.tar.gz -C /opt/sonarr
+
+# Verify
+ls -la /opt/sonarr/</pre>
+
+            <h3>6.3 Create Systemd Service</h3>
+            <pre>cat > /etc/systemd/system/sonarr.service << 'EOF'
+[Unit]
+Description=Sonarr Daemon
+After=network.target
+
+[Service]
+User=root
+Group=root
+Type=simple
+ExecStart=/opt/sonarr/Sonarr -nobrowser -data=/opt/sonarr/data
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Reload systemd
+systemctl daemon-reload
+
+# Enable and start
+systemctl enable --now sonarr
+
+# Check status
+systemctl status sonarr</pre>
+
+            <h3>6.4 Configure Sonarr</h3>
+            <p>Access Sonarr web interface:</p>
+            <p><strong>URL:</strong> <code>http://192.168.86.30:8989</strong></p>
+            
+            <p><strong>Initial Configuration:</strong></p>
+            <ol>
+                <li>Add media library: <code>/tank/media/tv</code></li>
+                <li>Add download client (qBittorrent, Transmission):</li>
+                <pre># Example: Install qBittorrent as secondary downloader
+apt install qbittorrent-nox
+systemctl enable --now qbittorrent-nox</pre>
+                <li>Add indexers (torrent sites) via Settings → Indexers</li>
+                <li>Connect to Jellyfin for library notifications</li>
+            </ol>
+
+            <h3>6.5 Sonarr File Permissions</h3>
+            <p>Sonarr runs as root and writes to ZFS. Ensure proper permissions:</p>
+            <pre># Make sure media directory is writable
+chown -R root:root /tank/media
+echo "mediauser ALL=(ALL) NOPASSWD: /bin/chown" >> /etc/sudoers</pre>
+        </section>
+
+        <!-- PHASE 5 -->
+        <section>
+            <h2>7. Phase 5: VPN with Gluetun</h2>
+            <div class="note">
+                Gluetun routes container traffic through VPN (WireGuard/OpenVPN). Protects download traffic. Optional but recommended for privacy.
+            </div>
+            
+            <h3>7.1 How Gluetun Works</h3>
+            <p>Gluetun creates a VPN tunnel container. Other containers route through it:</p>
+            <pre>┌─────────────────────────────────────┐
+│   LXC Container (with Docker)       │
+│   ┌─────────────────────────────┐   │
+│   │  Gluetun (VPN container)    │   │
+│   │  └─ Public VPN IP          │   │
+│   └──────────┬──────────────────┘   │
+│              ▼ (routing)           │
+│   ┌─────────────────────────────┐   │
+│   │  qBittorrent (downloader)   │   │
+│   │  └─ Uses VPN network       │   │
+│   └─────────────────────────────┘   │
+└─────────────────────────────────────┘</pre>
+
+            <h3>7.2 Install Gluetun</h3>
+            <p>In LXC container, update docker-compose.yml:</p>
+            <pre>services:
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    restart: unless-stopped
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    environment:
+      - VPN_TYPE=wireguard
+      - VPN_SERVICE_PROVIDER=custom
+      - VPN_ENDPOINT_IP=your.vpn.server.ip
+      - VPN_ENDPOINT_PORT=51820
+      - WIREGUARD_PUBLIC_KEY=YOUR_PUBLIC_KEY
+      - WIREGUARD_PRIVATE_KEY=YOUR_PRIVATE_KEY
+      - WIREGUARD_ADDRESSES=10.2.0.2/32
+      # Or use OpenVPN instead:
+      #- VPN_TYPE=openvpn
+      #- OPENVPN_USER=username
+      #- OPENVPN_PASSWORD=password
+    
+  qbittorrent:
+    image: linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    network_mode: "service:gluetun"  # Routes through VPN
+    depends_on:
+      - gluetun
+    environment:
+      - WEBUI_PORT=8080
+      - TORRENTING_PORT=6881
+    volumes:
+      - /opt/media-stack/config/qbittorrent:/config
+      - /opt/media-stack/media-shared/downloads:/downloads
+    restart: unless-stopped</pre>
+
+            <h3>7.3 Start VPN Stack</h3>
+            <pre>cd /opt/media-stack
+docker compose pull gluetun qbittorrent
+docker compose up -d
+
+# Verify VPN is working
+docker exec gluetun wget -qO- ipinfo.io
+# Should show VPN IP, not your home IP</pre>
+
+            <h3>7.4 Connect Sonarr to qBittorrent</h3>
+            <p>In Sonarr settings:</p>
+            <ul>
+                <li><strong>Download Client:</strong> qBittorrent</li>
+                <li><strong>Host:</strong> <code>192.168.86.46</code></li>
+                <li><strong>Port:</strong> <code>8080</code></li>
+                <li><strong>Category:</strong> <code>tv-sonarr</code></li>
+            </ul>
+
+            <h3>7.5 Gluetun VPN Providers</h3>
+            <table>
+                <tr><th>Provider</th><th>Config</th></tr>
+                <tr><td>Mullvad</td><td><code>VPN_SERVICE_PROVIDER=mullvad</code></td></tr>
+                <tr><td>Private Internet Access</td><td><code>VPN_SERVICE_PROVIDER=private internet access</code></td></tr>
+                <tr><td>ProtonVPN</td><td><code>VPN_SERVICE_PROVIDER=protonvpn</code></td></tr>
+                <tr><td>Custom</td><td><code>VPN_SERVICE_PROVIDER=custom</code> + manual WireGuard/OpenVPN</td></tr>
+            </table>
+            <p>Full provider list: <a href="https://github.com/qdm12/gluetun-wiki">github.com/qdm12/gluetun-wiki</a></p>
+        </section>
+
         <!-- LIMITATIONS -->
         <section>
-            <h2>6. LXC Docker Limitations</h2>
+            <h2>9. LXC Docker Limitations</h2>
             
             <h3>What Works in LXC</h3>
             <ul>
@@ -297,7 +460,7 @@ docker compose logs -f</pre>
 
         <!-- VERIFICATION -->
         <section>
-            <h2>7. Verification Checklist</h2>
+            <h2>10. Verification Checklist</h2>
             <table>
                 <tr><th>Component</th><th>Command / URL</th><th>Expected Result</th></tr>
                 <tr><td>Proxmox Web UI</td><td><code>https://192.168.86.30:8006</code></td><td>Login page loads</td></tr>
@@ -306,12 +469,15 @@ docker compose logs -f</pre>
                 <tr><td>Jellyfin</td><td><code>http://192.168.86.46:8096</code></td><td>Setup wizard</td></tr>
                 <tr><td>SAMBA</td><td><code>smbclient -L 192.168.86.30 -U mediauser</code></td><td>Shares listed</td></tr>
                 <tr><td>ZFS Pool</td><td><code>zpool list</code></td><td><code>tank</code> pool shown</td></tr>
+                <tr><td>Sonarr running</td><td><code>systemctl status sonarr</code></td><td>Active</td></tr>
+                <tr><td>Sonarr web UI</td><td><code>http://192.168.86.30:8989</code></td><td>Login page</td></tr>
+                <tr><td>VPN working</td><td><code>docker exec gluetun wget -qO- ipinfo.io</code></td><td>VPN IP (not home IP)</td></tr>
             </table>
         </section>
 
         <!-- VIDEOS -->
         <section>
-            <h2>8. Video Walkthroughs</h2>
+            <h2>11. Video Walkthroughs</h2>
             <div class="video-card">
                 <p><a href="https://youtu.be/zLFB6ulC0Fg">🎬 Part 1: Proxmox Hardware Setup</a></p>
                 <p>Physical server → Proxmox → RAID → Cockpit → Shares</p>
@@ -323,12 +489,14 @@ docker compose logs -f</pre>
         </section>
 
         <section>
-            <h2>9. Next Steps</h2>
+            <h2>12. Next Steps</h2>
             <ul>
                 <li>Add media to <code>/tank/media</code> via SAMBA share</li>
                 <li>Configure Jellyfin libraries and transcoding</li>
                 <li>Review <a href="maintenance.html">Maintenance Guide</a> for troubleshooting</li>
                 <li>Setup automated backups with ZFS snapshots</li>
+                <li>Configure Sonarr with download client and indexers</li>
+                <li>Test VPN routing with Gluetun</li>
             </ul>
         </section>
     </div>
