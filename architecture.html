@@ -7,43 +7,163 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root { --primary: #e57000; --secondary: #1a1a2e; --text: #333; --bg: #f4f4f4; --card: #fff; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; color: var(--text); background: var(--bg); }
         nav { background: var(--secondary); padding: 1rem; }
         nav .container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; }
         nav a { color: white; text-decoration: none; font-weight: 600; }
         header { background: linear-gradient(135deg, var(--secondary), #16213e); color: white; padding: 4rem 1rem; text-align: center; }
         header h1 { font-size: 2.5rem; }
-        .container { max-width: 900px; margin: 0 auto; padding: 2rem; }
-        section { background: var(--card); border-radius: 12px; padding: 2rem; margin: 2rem 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        h2 { color: var(--secondary); border-bottom: 3px solid var(--primary); padding-bottom: 0.5rem; }
-        pre { background: #1a1a2e; color: #fff; padding: 1.5rem; border-radius: 8px; overflow-x: auto; font-family: monospace; margin: 1rem 0; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 2rem; }
+        section { background: var(--card); border-radius: 12px; padding: 2rem; margin: 2rem 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid var(--primary); }
+        h2 { color: var(--secondary); border-bottom: 3px solid var(--primary); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h3 { color: var(--secondary); margin: 2rem 0 1rem; }
+        pre { background: #1a1a2e; color: #fff; padding: 1.5rem; border-radius: 8px; overflow-x: auto; font-family: monospace; margin: 1rem 0; border-left: 4px solid var(--primary); }
+        code { background: #e8e8e8; padding: 0.2rem 0.4rem; border-radius: 4px; font-family: monospace; }
         table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
-        th, td { padding: 0.75rem; border: 1px solid #ddd; text-align: left; }
+        th, td { padding: 1rem; border: 1px solid #ddd; text-align: left; }
         th { background: var(--secondary); color: white; }
+        td code { background: #1a1a2e; color: #00ff88; }
+        ul { margin: 1rem 0 1rem 1.5rem; }
+        li { margin-bottom: 0.5rem; }
+        .note { background: #e8f4fd; border-left: 4px solid #17a2b8; padding: 1rem; margin: 1rem 0; border-radius: 4px; }
+        .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 1rem; margin: 1rem 0; border-radius: 4px; }
+        .video-card { background: linear-gradient(135deg, var(--secondary), #16213e); color: white; padding: 1.5rem; border-radius: 12px; margin: 1rem 0; }
+        .video-card a { color: var(--primary); font-weight: 600; }
         footer { background: var(--secondary); color: white; padding: 2rem; text-align: center; margin-top: 4rem; }
-        a { color: var(--primary); text-decoration: none; }
+        footer a { color: var(--primary); }
     </style>
 </head>
 <body>
     <nav><div class="container"><a href="index.html">🏠 Docs Hub</a><div><a href="index.html">Home</a> | <a href="maintenance.html">Maintenance</a></div></div></nav>
-    <header><h1>📖 Architecture Guide</h1><p>From bare metal to working Jellyfin</p></header>
     
+    <header>
+        <h1>📖 Architecture Guide</h1>
+        <p>Complete walkthrough from bare metal to working Jellyfin media server</p>
+    </header>
+
     <div class="container">
+        <!-- OVERVIEW -->
         <section>
-            <h2>Phase 1: Proxmox Setup</h2>
-            <pre>apt install -y cockpit
-systemctl enable --now cockpit.socket
-# Access: https://192.168.86.30:9090</pre>
+            <h2>1. Overview</h2>
+            <p>This guide walks through building a complete media server infrastructure on Proxmox VE, from bare metal installation to a fully working Jellyfin streaming setup. The architecture uses a lightweight LXC container running Docker, with ZFS for storage and SAMBA for file sharing.</p>
             
-            <pre>zpool create tank /dev/sdb
+            <pre>Target Architecture:
+┌─────────────────────────────────────────────────────────┐
+│          Bare Metal Server (192.168.86.30)             │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │           Proxmox VE Host                       │   │
+│  │  ┌──────────────────────────────────────────┐   │   │
+│  │  │     LXC Container (Ubuntu + Docker)       │   │   │
+│  │  │  ┌─────────┐  ┌────────────────────────┐ │   │   │
+│  │  │  │ Jellyfin │  │    Docker Compose     │ │   │   │
+│  │  │  │ :8096   │  │                        │ │   │   │
+│  │  │  └─────────┘  └────────────────────────┘ │   │   │
+│  │  └──────────────────────────────────────────┘   │   │
+│  │  • Cockpit (:9090)                             │   │
+│  │  • ZFS Pool (/tank/media)                      │   │
+│  │  • SAMBA Shares                                │   │
+│  └──────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘</pre>
+        </section>
+
+        <!-- WHY THESE COMPONENTS -->
+        <section>
+            <h2>2. Why These Components?</h2>
+            
+            <h3>Proxmox VE (Hypervisor)</h3>
+            <ul>
+                <li><strong>Type 1 Hypervisor</strong> — Runs directly on hardware, no host OS overhead</li>
+                <li><strong>Web UI + REST API</strong> — Manage everything from browser without CLI</li>
+                <li><strong>Built-in Backup</strong> — Snapshot VMs and containers instantly</li>
+                <li><strong>Free & Open Source</strong> — No licensing costs</li>
+            </ul>
+
+            <h3>LXC vs Full VM Comparison</h3>
+            <table>
+                <tr><th>Feature</th><th>LXC (Container)</th><th>Full VM</th></tr>
+                <tr><td>Resource Usage</td><td>Minimal — shares host kernel</td><td>Higher — separate kernel</td></tr>
+                <tr><td>Boot Time</td><td>Seconds</td><td>Minutes</td></tr>
+                <tr><td>Memory Overhead</td><td>~10-20MB</td><td>~512MB+</td></tr>
+                <tr><td>Isolation Level</td><td>Process-level</td><td>Full hardware virtualization</td></tr>
+                <tr><td>Privilege</td><td>Limited (security)</td><td>Full (more flexible)</td></tr>
+            </table>
+
+            <div class="warning">
+                <strong>Trade-off:</strong> LXC is secure but limited. Apps needing kernel modifications (Sonarr) won't work in unprivileged LXC.
+            </div>
+
+            <h3>Docker + Docker Compose</h3>
+            <ul>
+                <li><strong>Infrastructure as Code</strong> — Define entire stack in YAML</li>
+                <li><strong>Application Isolation</strong> — Apps don't conflict with system</li>
+                <li><strong>Easy Updates</strong> — One command to pull and restart</li>
+                <li><strong>Portable</strong> — Same config works on any Docker host</li>
+            </ul>
+
+            <h3>Jellyfin</h3>
+            <ul>
+                <li><strong>Open Source</strong> — Plex alternative, no account required</li>
+                <li><strong>GPU Transcoding</strong> — Offload video encoding to GPU</li>
+                <li><strong>Privacy-First</strong> — Self-hosted, no cloud connection</li>
+            </ul>
+
+            <h3>ZFS Storage</h3>
+            <ul>
+                <li><strong>Copy-on-Write Snapshots</strong> — Instant backups</li>
+                <li><strong>Self-Healing</strong> — Detects and repairs bit rot</li>
+                <li><strong>Compression</strong> — Transparent zstd compression</li>
+                <li><strong>Datasets</strong> — Logical separation of storage</li>
+            </ul>
+        </section>
+
+        <!-- PHASE 1 -->
+        <section>
+            <h2>3. Phase 1: Proxmox Host Setup</h2>
+            
+            <div class="note">
+                Assumes Proxmox VE is already installed on bare metal. If not, download ISO from proxmox.com and follow installer.
+            </div>
+
+            <h3>3.1 Post-Install Updates</h3>
+            <p>Always update the system first:</p>
+            <pre>apt update && apt -y upgrade</pre>
+
+            <h3>3.2 Install Cockpit (Web Management)</h3>
+            <p>Cockpit provides a web interface for managing the Linux host — disks, networking, services:</p>
+            <pre>apt install -y cockpit
+systemctl enable --now cockpit.socket</pre>
+            <p><strong>Access:</strong> <code>https://192.168.86.30:9090</code></p>
+
+
+            <h3>3.3 Enable IP Forwarding (Required for containers)</h3>
+            <pre>echo 'net.ipv4.ip_forward=1' > /etc/sysctl.d/99-forwarding.conf
+sysctl --system</pre>
+
+            <h3>3.4 Create ZFS Storage Pool</h3>
+            <p>Check available disks, then create pool:</p>
+            <pre># Check disks
+lsblk
+
+# Create ZFS pool (replace /dev/sdb with your disk)
+zpool create tank /dev/sdb
 zfs set mountpoint=/tank tank
 zfs set compression=zstd tank
-zfs create tank/media</pre>
-            
+
+# Create datasets
+zfs create tank/media
+zfs create tank/backup
+
+# Verify
+zfs list</pre>
+
+            <h3>3.5 Configure SAMBA File Sharing</h3>
             <pre>apt install -y samba
+
+# Create system user for SAMBA
 useradd -r -s /bin/false mediauser
 smbpasswd -a mediauser
 
+# Configure share
 cat >> /etc/samba/smb.conf << 'EOF'
 [media]
 path = /tank/media
@@ -52,45 +172,169 @@ read only = no
 guest ok = no
 valid users = mediauser
 EOF
-systemctl restart smbd</pre>
+
+systemctl restart smbd
+systemctl enable smbd</pre>
+            <p><strong>Windows Access:</strong> <code>\\192.168.86.30\media</code></p>
         </section>
-        
+
+        <!-- PHASE 2 -->
         <section>
-            <h2>Phase 2: LXC Container</h2>
-            <pre>pct create 100 ubuntu-22.04.tar.zst \
-  --hostname media-stack --memory 4096 \
-  --net0 eth0,bridge=vmbr0,ip=dhcp
+            <h2>4. Phase 2: LXC Container Setup</h2>
+            
+            <h3>4.1 Download and Create Container</h3>
+            <pre># Download Ubuntu template (Web UI: Datacenter > Storage > CT Templates)
+# Or CLI:
+pveam download local ubuntu-22.04-standard_22.04-1_amd64.tar.zst
+
+# Create container
+pct create 100 /var/lib/vz/template/cache/ubuntu-22.04-standard_22.04-1_amd64.tar.zst \
+  --hostname media-stack \
+  --memory 4096 \
+  --net0 name=eth0,bridge=vmbr0,ip=dhcp \
+  --storage local-zfs \
+  --rootfs local-zfs:20
+
+# Start container
 pct start 100</pre>
-            
-            <pre>apt install -y docker-ce docker-compose-plugin
-docker --version</pre>
-            
-            <pre>pct set 100 -mp0 /tank/media,mp=/opt/media-stack/media-shared</pre>
+
+            <h3>4.2 Install Docker</h3>
+            <pre># Enter container
+pct exec 100 bash
+
+# Update and install prerequisites
+apt update && apt install -y apt-transport-https ca-certificates curl gnupg lsb-release
+
+# Add Docker GPG key
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+# Add repository
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
+
+# Install Docker
+apt update
+apt install -y docker-ce docker-ce-cli docker-compose-plugin
+
+# Verify installation
+docker --version
+systemctl enable --now docker</pre>
+
+            <div class="note">
+                <strong>Note:</strong> Docker Compose v2 is installed as a plugin (<code>docker compose</code>, not <code>docker-compose</code>).
+            </div>
+
+            <h3>4.3 Mount ZFS Pool to Container</h3>
+            <pre># On Proxmox host (not in container):
+pct set 100 -mp0 /tank/media,mp=/opt/media-stack/media-shared
+
+# Verify mount works in container:
+pct exec 100 -- ls -la /opt/media-stack/media-shared</pre>
         </section>
-        
+
+        <!-- PHASE 3 -->
         <section>
-            <h2>Phase 3: Docker Stack</h2>
+            <h2>5. Phase 3: Docker Stack Deployment</h2>
+            
+            <h3>5.1 Create Directory Structure</h3>
+            <pre># In container (pct exec 100)
+mkdir -p /opt/media-stack/config/jellyfin
+mkdir -p /opt/media-stack/media-shared</pre>
+
+            <h3>5.2 Create Docker Compose File</h3>
+            <p>Create <code>/opt/media-stack/docker-compose.yml</code>:</p>
             <pre>services:
   jellyfin:
     image: jellyfin/jellyfin:latest
+    container_name: jellyfin
     network_mode: host
     volumes:
       - /opt/media-stack/config/jellyfin:/config
-      - /opt/media-stack/media-shared:/media
-    restart: unless-stopped</pre>
-            
+      - /opt/media-stack/media-shared:/media:ro
+    restart: unless-stopped
+    environment:
+      - TZ=America/Los_Angeles
+    # Optional: GPU transcoding (Intel/AMD/NVIDIA)
+    # devices:
+    #   - /dev/dri:/dev/dri</pre>
+
+            <h3>5.3 Start Jellyfin</h3>
             <pre>cd /opt/media-stack
-docker compose up -d</pre>
-            <p>Access: http://192.168.86.46:8096</p>
+docker compose up -d
+
+# Check status
+docker compose ps
+
+# View logs
+docker compose logs -f</pre>
+
+            <p><strong>Access Jellyfin:</strong> <code>http://192.168.86.46:8096</code></p>
+            <p>Follow the setup wizard to configure libraries, user accounts, and transcoding options.</p>
         </section>
-        
+
+        <!-- LIMITATIONS -->
         <section>
-            <h2>Video References</h2>
-            <p><a href="https://youtu.be/zLFB6ulC0Fg">Part 1: Hardware Setup</a></p>
-            <p><a href="https://youtu.be/Uzqf0qlcQlo">Part 2: Apps</a></p>
+            <h2>6. LXC Docker Limitations</h2>
+            
+            <h3>What Works in LXC</h3>
+            <ul>
+                <li>✅ Jellyfin — Standard unprivileged container works</li>
+                <li>✅ File serving — Mountpoints accessible</li>
+                <li>✅ Most Docker apps — No special privileges needed</li>
+                <li>⚠️ VPN containers — May need CAP_NET_ADMIN</li>
+            </ul>
+
+            <h3>What Does NOT Work</h3>
+            <ul>
+                <li>❌ <strong>Sonarr</strong> — Requires privileged container (sysctl modifications)</li>
+                <li>❌ <strong>Kernel modifications</strong> — Blocked by LXC security</li>
+                <li>❌ <strong>Full network routing</strong> — May require privileged mode</li>
+            </ul>
+
+            <div class="warning">
+                <strong>Workaround for Sonarr:</strong> Install natively on Proxmox host instead of in LXC. See Maintenance Guide for details.
+            </div>
+        </section>
+
+        <!-- VERIFICATION -->
+        <section>
+            <h2>7. Verification Checklist</h2>
+            <table>
+                <tr><th>Component</th><th>Command / URL</th><th>Expected Result</th></tr>
+                <tr><td>Proxmox Web UI</td><td><code>https://192.168.86.30:8006</code></td><td>Login page loads</td></tr>
+                <tr><td>Cockpit</td><td><code>https://192.168.86.30:9090</code></td><td>Linux management UI</td></tr>
+                <tr><td>Container Status</td><td><code>pct status 100</code></td><td><code>running</code></td></tr>
+                <tr><td>Jellyfin</td><td><code>http://192.168.86.46:8096</code></td><td>Setup wizard</td></tr>
+                <tr><td>SAMBA</td><td><code>smbclient -L 192.168.86.30 -U mediauser</code></td><td>Shares listed</td></tr>
+                <tr><td>ZFS Pool</td><td><code>zpool list</code></td><td><code>tank</code> pool shown</td></tr>
+            </table>
+        </section>
+
+        <!-- VIDEOS -->
+        <section>
+            <h2>8. Video Walkthroughs</h2>
+            <div class="video-card">
+                <p><a href="https://youtu.be/zLFB6ulC0Fg">🎬 Part 1: Proxmox Hardware Setup</a></p>
+                <p>Physical server → Proxmox → RAID → Cockpit → Shares</p>
+            </div>
+            <div class="video-card">
+                <p><a href="https://youtu.be/Uzqf0qlcQlo">🎬 Part 2: Apps & Docker</a></p>
+                <p>LXC containers → Docker → Jellyfin → Sonarr → VPN</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>9. Next Steps</h2>
+            <ul>
+                <li>Add media to <code>/tank/media</code> via SAMBA share</li>
+                <li>Configure Jellyfin libraries and transcoding</li>
+                <li>Review <a href="maintenance.html">Maintenance Guide</a> for troubleshooting</li>
+                <li>Setup automated backups with ZFS snapshots</li>
+            </ul>
         </section>
     </div>
-    
-    <footer><p><a href="index.html">← Back to Hub</a></p></footer>
+
+    <footer>
+        <p>Proxmox Media Server Documentation | <a href="index.html">← Back to Hub</a></p>
+    </footer>
 </body>
 </html>
