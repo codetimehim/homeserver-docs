@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proxmox Media Server - Documentation Hub</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #e57000;
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+            color: #333;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+        .card p {
+            color: #555;
+            font-size: 0.95rem;
+            margin-bottom: 15px;
+        }
+        .btn {
+            display: inline-block;
+            background: #e57000;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1rem;
+        }
+        .btn-secondary {
+            background: #333;
+        }
+        .video-links {
+            margin-top: 30px;
+        }
+        .video-links h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .video-item {
+            background: white;
+            border-left: 4px solid #cc0000;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        .video-item a {
+            color: #cc0000;
+            font-weight: 500;
+            text-decoration: none;
+            font-size: 1rem;
+        }
+        .video-item p {
+            color: #666;
+            font-size: 0.85rem;
+            margin-top: 5px;
+        }
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #999;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏠 Proxmox Media Server</h1>
+        <p class="subtitle">Complete documentation for your home media infrastructure</p>
+
+        <div class="card">
+            <h2>📖 Architecture Guide</h2>
+            <p>Fresh install walkthrough from bare metal to working Jellyfin. Learn why each component was chosen and follow step-by-step setup.</p>
+            <a href="architecture.html" class="btn">View Guide</a>
+        </div>
+
+        <div class="card">
+            <h2>🔧 Maintenance Guide</h2>
+            <p>Quick reference for fixing broken components, reinstalling apps, and troubleshooting without full rebuild.</p>
+            <a href="maintenance.html" class="btn btn-secondary">View Guide</a>
+        </div>
+
+        <div class="video-links">
+            <h3>📺 Video References</h3>
+            <div class="video-item">
+                <a href="https://youtu.be/zLFB6ulC0Fg" target="_blank">Part 1: Proxmox Hardware Setup</a>
+                <p>RAID, Cockpit, Shares, Base System</p>
+            </div>
+            <div class="video-item">
+                <a href="https://youtu.be/Uzqf0qlcQlo" target="_blank">Part 2: Apps & Docker Stack</a>
+                <p>Jellyfin, Sonarr, Gluetun, *arr Apps</p>
+            </div>
+        </div>
+
+        <footer>
+            <p>Last updated: 2026-02-15</p>
+        </footer>
+    </div>
+</body>
+</html>
