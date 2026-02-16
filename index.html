@@ -6,121 +6,164 @@
     <title>Proxmox Media Server - Documentation Hub</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #e57000;
+            --primary-dark: #c45a00;
+            --secondary: #1a1a2e;
+            --accent: #16213e;
+            --text: #333;
+            --text-light: #666;
+            --bg: #f8f9fa;
+            --card: #ffffff;
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             line-height: 1.6;
-            color: #333;
-            background: #f5f5f5;
-            padding: 20px;
+            color: var(--text);
+            background: linear-gradient(135deg, var(--bg) 0%, #e8e8e8 100%);
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
+        header {
+            background: linear-gradient(135deg, var(--secondary) 0%, var(--accent) 100%);
+            color: white;
+            padding: 3rem 1rem;
         }
-        h1 {
-            color: #e57000;
-            font-size: 1.8rem;
-            margin-bottom: 10px;
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; }
+        header h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        header p { max-width: 600px; opacity: 0.9; }
+        
+        .architecture {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin: 2rem 0;
+            border-left: 4px solid var(--primary);
         }
-        .subtitle {
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 0.95rem;
+        .architecture pre {
+            font-family: monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            padding: 3rem 0;
         }
         .card {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background: var(--card);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+            transition: all 0.3s ease;
         }
-        .card h2 {
-            color: #333;
-            font-size: 1.2rem;
-            margin-bottom: 10px;
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
         }
-        .card p {
-            color: #555;
-            font-size: 0.95rem;
-            margin-bottom: 15px;
+        .card h2 { color: var(--secondary); margin: 1rem 0; }
+        .badge {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
         }
         .btn {
             display: inline-block;
-            background: #e57000;
+            background: var(--primary);
             color: white;
-            padding: 12px 24px;
+            padding: 0.875rem 1.5rem;
             border-radius: 8px;
             text-decoration: none;
-            font-weight: 500;
-            font-size: 1rem;
+            font-weight: 600;
+            margin-top: 1rem;
         }
-        .btn-secondary {
-            background: #333;
+        
+        .videos {
+            background: var(--secondary);
+            color: white;
+            padding: 3rem 0;
         }
-        .video-links {
-            margin-top: 30px;
+        .videos h2 { text-align: center; margin-bottom: 2rem; }
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
         }
-        .video-links h3 {
-            color: #333;
-            margin-bottom: 15px;
+        .video-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
         }
-        .video-item {
-            background: white;
-            border-left: 4px solid #cc0000;
-            padding: 15px;
-            margin-bottom: 10px;
-        }
-        .video-item a {
-            color: #cc0000;
-            font-weight: 500;
-            text-decoration: none;
-            font-size: 1rem;
-        }
-        .video-item p {
-            color: #666;
-            font-size: 0.85rem;
-            margin-top: 5px;
-        }
+        .video-card a { color: var(--primary); font-weight: 600; text-decoration: none; }
+        
         footer {
-            margin-top: 30px;
+            background: var(--secondary);
+            color: white;
+            padding: 2rem;
             text-align: center;
-            color: #999;
-            font-size: 0.85rem;
+            margin-top: 3rem;
         }
+        a { color: var(--primary); }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🏠 Proxmox Media Server</h1>
-        <p class="subtitle">Complete documentation for your home media infrastructure</p>
+    <header>
+        <div class="container">
+            <h1>Proxmox Media Server</h1>
+            <p>Complete documentation for building production-ready home media infrastructure</p>
+        </div>
+    </header>
 
-        <div class="card">
-            <h2>📖 Architecture Guide</h2>
-            <p>Fresh install walkthrough from bare metal to working Jellyfin. Learn why each component was chosen and follow step-by-step setup.</p>
-            <a href="architecture.html" class="btn">View Guide</a>
+    <main class="container">
+        <div class="architecture">
+            <pre>Architecture Overview
+├── Proxmox Host (192.168.86.30)
+│   ├── Cockpit Web UI (:9090)
+│   ├── ZFS Pool (/tank/media)
+│   ├── SAMBA Shares
+│   └── LXC Container (ID 100)
+│       ├── Docker Engine
+│       ├── Jellyfin (:8096)
+│       └── Docker Compose</pre>
         </div>
 
-        <div class="card">
-            <h2>🔧 Maintenance Guide</h2>
-            <p>Quick reference for fixing broken components, reinstalling apps, and troubleshooting without full rebuild.</p>
-            <a href="maintenance.html" class="btn btn-secondary">View Guide</a>
-        </div>
-
-        <div class="video-links">
-            <h3>📺 Video References</h3>
-            <div class="video-item">
-                <a href="https://youtu.be/zLFB6ulC0Fg" target="_blank">Part 1: Proxmox Hardware Setup</a>
-                <p>RAID, Cockpit, Shares, Base System</p>
+        <div class="grid">
+            <div class="card">
+                <span class="badge">Fresh Install</span>
+                <h2>📖 Architecture Guide</h2>
+                <p>Step-by-step from bare metal to working Jellyfin. Learn why each component was chosen.</p>
+                <a href="architecture.html" class="btn">View Guide →</a>
             </div>
-            <div class="video-item">
-                <a href="https://youtu.be/Uzqf0qlcQlo" target="_blank">Part 2: Apps & Docker Stack</a>
-                <p>Jellyfin, Sonarr, Gluetun, *arr Apps</p>
+            <div class="card">
+                <span class="badge" style="background: var(--primary)">Maintenance</span>
+                <h2>🔧 Maintenance Guide</h2>
+                <p>Quick reference for fixing broken components and troubleshooting.</p>
+                <a href="maintenance.html" class="btn">View Guide →</a>
             </div>
         </div>
 
-        <footer>
-            <p>Last updated: 2026-02-15</p>
-        </footer>
-    </div>
+        <div class="videos">
+            <div class="container">
+                <h2>📺 Video References</h2>
+                <div class="video-grid">
+                    <div class="video-card">
+                        <a href="https://youtu.be/zLFB6ulC0Fg">Part 1: Hardware Setup</a>
+                        <p>Proxmox, RAID, Cockpit, Shares</p>
+                    </div>
+                    <div class="video-card">
+                        <a href="https://youtu.be/Uzqf0qlcQlo">Part 2: Apps & Docker</a>
+                        <p>Jellyfin, Sonarr, Gluetun</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>Last updated: 2026-02-15</p>
+    </footer>
 </body>
 </html>

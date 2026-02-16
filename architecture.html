@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architecture Guide - Proxmox Media Server</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --primary: #e57000; --secondary: #1a1a2e; --text: #333; --bg: #f4f4f4; --card: #fff; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); }
+        nav { background: var(--secondary); padding: 1rem; }
+        nav .container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; }
+        nav a { color: white; text-decoration: none; font-weight: 600; }
+        header { background: linear-gradient(135deg, var(--secondary), #16213e); color: white; padding: 4rem 1rem; text-align: center; }
+        header h1 { font-size: 2.5rem; }
+        .container { max-width: 900px; margin: 0 auto; padding: 2rem; }
+        section { background: var(--card); border-radius: 12px; padding: 2rem; margin: 2rem 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        h2 { color: var(--secondary); border-bottom: 3px solid var(--primary); padding-bottom: 0.5rem; }
+        pre { background: #1a1a2e; color: #fff; padding: 1.5rem; border-radius: 8px; overflow-x: auto; font-family: monospace; margin: 1rem 0; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { padding: 0.75rem; border: 1px solid #ddd; text-align: left; }
+        th { background: var(--secondary); color: white; }
+        footer { background: var(--secondary); color: white; padding: 2rem; text-align: center; margin-top: 4rem; }
+        a { color: var(--primary); text-decoration: none; }
+    </style>
+</head>
+<body>
+    <nav><div class="container"><a href="index.html">🏠 Docs Hub</a><div><a href="index.html">Home</a> | <a href="maintenance.html">Maintenance</a></div></div></nav>
+    <header><h1>📖 Architecture Guide</h1><p>From bare metal to working Jellyfin</p></header>
+    
+    <div class="container">
+        <section>
+            <h2>Phase 1: Proxmox Setup</h2>
+            <pre>apt install -y cockpit
+systemctl enable --now cockpit.socket
+# Access: https://192.168.86.30:9090</pre>
+            
+            <pre>zpool create tank /dev/sdb
+zfs set mountpoint=/tank tank
+zfs set compression=zstd tank
+zfs create tank/media</pre>
+            
+            <pre>apt install -y samba
+useradd -r -s /bin/false mediauser
+smbpasswd -a mediauser
+
+cat >> /etc/samba/smb.conf << 'EOF'
+[media]
+path = /tank/media
+browseable = yes
+read only = no
+guest ok = no
+valid users = mediauser
+EOF
+systemctl restart smbd</pre>
+        </section>
+        
+        <section>
+            <h2>Phase 2: LXC Container</h2>
+            <pre>pct create 100 ubuntu-22.04.tar.zst \
+  --hostname media-stack --memory 4096 \
+  --net0 eth0,bridge=vmbr0,ip=dhcp
+pct start 100</pre>
+            
+            <pre>apt install -y docker-ce docker-compose-plugin
+docker --version</pre>
+            
+            <pre>pct set 100 -mp0 /tank/media,mp=/opt/media-stack/media-shared</pre>
+        </section>
+        
+        <section>
+            <h2>Phase 3: Docker Stack</h2>
+            <pre>services:
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    network_mode: host
+    volumes:
+      - /opt/media-stack/config/jellyfin:/config
+      - /opt/media-stack/media-shared:/media
+    restart: unless-stopped</pre>
+            
+            <pre>cd /opt/media-stack
+docker compose up -d</pre>
+            <p>Access: http://192.168.86.46:8096</p>
+        </section>
+        
+        <section>
+            <h2>Video References</h2>
+            <p><a href="https://youtu.be/zLFB6ulC0Fg">Part 1: Hardware Setup</a></p>
+            <p><a href="https://youtu.be/Uzqf0qlcQlo">Part 2: Apps</a></p>
+        </section>
+    </div>
+    
+    <footer><p><a href="index.html">← Back to Hub</a></p></footer>
+</body>
+</html>
