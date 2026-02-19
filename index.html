@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Server Docs</title>
+    <style>
+        :root {
+            --bg: #0d1117; --text: #c9d1d9; --heading: #f0f6fc;
+            --accent: #3fb950; --accent-hover: #2ea043; --border: #30363d;
+            --card-bg: #161b22; --link: #58a6ff;
+        }
+        * { margin: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg); color: var(--text); line-height: 1.7;
+            max-width: 900px; margin: 0 auto; padding: 2rem;
+        }
+        h1 { color: var(--heading); font-size: 2.5rem; margin-bottom: 0.5rem; text-align: center; }
+        .subtitle { text-align: center; color: #8b949e; margin-bottom: 2rem; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+        .card {
+            background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
+            padding: 1.5rem; transition: all 0.2s; cursor: pointer; text-decoration: none; color: inherit;
+        }
+        .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+        .card h3 { color: var(--accent); font-size: 1.3rem; margin-bottom: 0.5rem; }
+        .card p { color: var(--text); font-size: 0.95rem; }
+        .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+        .status {
+            background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;
+            padding: 1rem 1.5rem; margin-top: 2rem;
+        }
+        .status h2 { font-size: 1.1rem; margin-bottom: 1rem; color: var(--accent); }
+        .status-row { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
+        .status-row:last-child { border-bottom: none; }
+        .status-value { color: var(--accent); font-family: monospace; }
+        a { color: var(--link); }
+        footer { text-align: center; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border); color: #8b949e; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <h1>Home Server Documentation</h1>
+    <p class="subtitle">Proxmox Media Server - Complete Reference</p>
+
+    <div class="grid">
+        <a href="architecture.html" class="card">
+            <div class="icon">📐</div>
+            <h3>Architecture Guide</h3>
+            <p>Fresh install walkthrough from bare metal to working Jellyfin streaming. Hardware setup, ZFS pools, Docker stack.</p>
+        </a>
+
+        <a href="maintenance.html" class="card">
+            <div class="icon">🔧</div>
+            <h3>Maintenance Guide</h3>
+            <p>Break/fix procedures, reinstalls, troubleshooting. LXC network fixes, ZFS repair, app recovery.</p>
+        </a>
+
+        <a href="control.html" class="card">
+            <div class="icon">🧠</div>
+            <h3>Control Center</h3>
+            <p>Memory overview, active policies, configuration context, AI assumptions, and system status.</p>
+        </a>
+
+        <a href="https://github.com/codetimehim/homeserver-docs" target="_blank" class="card">
+            <div class="icon">🐙</div>
+            <h3>GitHub Source</h3>
+            <p>Source files, edit history, and permanent archive at github.com/codetimehim/homeserver-docs</p>
+        </a>
+    </div>
+
+    <div class="status">
+        <h2>🔗 Quick Links</h2>
+        <div class="status-row">
+            <span>Proxmox Web UI</span>
+            <a href="https://192.168.86.30:8006" class="status-value">192.168.86.30:8006</a>
+        </div>
+        <div class="status-row">
+            <span>Cockpit</span>
+            <a href="https://192.168.86.30:9090" class="status-value">192.168.86.30:9090</a>
+        </div>
+        <div class="status-row">
+            <span>Jellyfin</span>
+            <a href="http://192.168.86.46:8096" class="status-value">192.168.86.46:8096</a>
+        </div>
+        <div class="status-row">
+            <span>Video Part 1</span>
+            <a href="https://youtu.be/zLFB6ulC0Fg" class="status-value">Hardware Setup</a>
+        </div>
+        <div class="status-row">
+            <span>Video Part 2</span>
+            <a href="https://youtu.be/Uzqf0qlcQlo" class="status-value">Apps & Docker</a>
+        </div>
+    </div>
+
+    <footer>
+        <p>Last updated: 2026-02-18 • Running on systemd user service</p>
+        <p style="margin-top: 0.5rem;">Current URL: <a href="https://descending-apartment-attacked-stamp.trycloudflare.com">descending-apartment-attacked-stamp.trycloudflare.com</a></p>
+    </footer>
+</body>
+</html>

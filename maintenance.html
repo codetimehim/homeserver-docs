@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance - Proxmox Media Server</title>
+    <style>
+        :root {
+            --bg: #0d1117; --text: #c9d1d9; --heading: #f0f6fc;
+            --accent: #3fb950; --warning: #f8cb3b; --border: #30363d;
+            --code-bg: #161b22; --link: #58a6ff;
+        }
+        * { margin: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg); color: var(--text); line-height: 1.7;
+            max-width: 900px; margin: 0 auto; padding: 2rem;
+        }
+        nav { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.5rem; margin-bottom: 2rem; }
+        nav a { color: var(--link); text-decoration: none; margin-right: 1.5rem; font-weight: 500; }
+        nav a:hover { text-decoration: underline; }
+        h1 { color: var(--heading); font-size: 2.2rem; margin-bottom: 0.5rem; border-bottom: 2px solid var(--warning); padding-bottom: 0.5rem; }
+        h2 { color: var(--heading); font-size: 1.6rem; margin: 2rem 0 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+        h3 { color: var(--heading); font-size: 1.3rem; margin: 1.5rem 0 0.8rem; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; overflow-x: auto; font-family: monospace; font-size: 0.85rem; }
+        code { background: var(--code-bg); padding: 0.2rem 0.4rem; border-radius: 4px; font-family: monospace; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { border: 1px solid var(--border); padding: 0.75rem; text-align: left; }
+        th { background: var(--code-bg); color: var(--heading); }
+        a { color: var(--link); }
+        .alert { background: rgba(59, 248, 160, 0.1); border-left: 4px solid var(--accent); padding: 1rem 1.5rem; margin: 1.5rem 0; }
+        .warning { background: rgba(248, 203, 59, 0.1); border-left-color: var(--warning); }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="index.html">Hub</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="maintenance.html">Maintenance</a>
+        <a href="control.html">Control</a>
+    </nav>
+
+    <h1>Maintenance & Troubleshooting</h1>
+
+    <p class="alert">Quick reference for fixing broken components without full rebuild.</p>
+
+    <h2>Service Locations</h2>
+    <table>
+        <tr><th>Service</th><th>Host/Container</th><th>IP:Port</th></tr>
+        <tr><td>Proxmox Web UI</td><td>Host</td><td>192.168.86.30:8006</td></tr>
+        <tr><td>Cockpit</td><td>Host</td><td>192.168.86.30:9090</td></tr>
+        <tr><td>Jellyfin</td><td>LXC 100</td><td>192.168.86.46:8096</td></tr>
+        <tr><td>SAMBA</td><td>Host</td><td>192.168.86.30</td></tr>
+        <tr><td>SSH</td><td>Host</td><td>192.168.86.30:22</td></tr>
+    </table>
+
+    <h2>Jellyfin: Reinstall (Preserve Config)</h2>
+
+    <h3>Container Running But App Broken</h3>
+    <pre>pct exec 100 bash
+cd /opt/media-stack
+docker compose down
+docker compose pull jellyfin
+docker compose up -d
+docker compose ps</pre>
+
+    <h3>Full Container Rebuild</h3>
+    <pre># Stop container
+pct stop 100
+
+# Backup config
+pct exec 100 tar czf /tmp/jellyfin-backup.tar.gz /opt/media-stack/config
+cpct exec 100 cp /tmp/jellyfin-backup.tar.gz /tmp/
+
+# Rebuild container (see Architecture)
+# Then restore:
+pct exec 100 bash
+tar xzf /tmp/jellyfin-backup.tar.gz -C /
+docker restart jellyfin</pre>
+
+    <h2>ZFS: Check and Repair</h2>
+
+    <h3>Check Pool Health</h3>
+    <pre>zpool status tank
+zfs list</pre>
+
+    <h3>Repair Corruption</h3>
+    <pre>zpool scrub tank
+zpool status tank -v</pre>
+
+    <h2>SAMBA: Troubleshoot</h2>
+
+    <h3>Restart</h3>
+    <pre>systemctl restart smbd
+systemctl status smbd</pre>
+
+    <h3>Test from Linux</h3>
+    <pre>smbclient -L 192.168.86.30 -U mediauser
+mount -t cifs //192.168.86.30/media /mnt -o username=mediauser</pre>
+
+    <h3>Check Permissions</h3>
+    <pre>ls -la /tank/media/
+getfacl /tank/media/</pre>
+
+    <h2>LXC: Network Fix</h2>
+
+    <h3>Lost Internet</h3>
+    <pre>pct stop 100
+pct start 100
+pct exec 100 -- ping -c 2 8.8.8.8</pre>
+
+    <h2>Known Issue: Sonarr Cannot Run in Docker</h2>
+    <p class="warning alert">Sonarr requires privileged sysctl access. LXC unprivileged containers block this.</p>
+
+    <h3>Solution: Native Install on Host</h3>
+    <pre># On Proxmox host (NOT container)
+cd /tmp
+wget "https://services.sonarr.tv/v1/download/main/latest?version=4&os=linux&arch=x64" -O sonarr.tar.gz
+mkdir -p /opt/sonarr
+tar -xzf sonarr.tar.gz -C /opt/sonarr
+useradd -r -s /bin/false sonarr
+chown -R sonarr:sonarr /opt/sonarr
+
+cat > /etc/systemd/system/sonarr.service << 'EOF'
+[Unit]
+Description=Sonarr
+After=network.target
+[Service]
+User=sonarr
+Group=sonarr
+ExecStart=/opt/sonarr/Sonarr -nobrowser -data=/var/lib/sonarr
+Restart=on-failure
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable --now sonarr
+# Access: http://192.168.86.30:8989</pre>
+
+    <h2>SSH: Regenerate Keys</h2>
+    <pre># On your local machine
+ssh-keygen -t ed25519 -f ~/.openclaw/keys/openclaw -N ""
+cat ~/.openclaw/keys/openclaw.pub
+
+# On Proxmox host
+mkdir -p /root/.ssh
+echo "YOUR_PUBKEY_HERE" >> /root/.ssh/authorized_keys
+chmod 600 /root/.ssh/authorized_keys</pre>
+
+    <h2>Update Procedures</h2>
+    <pre># Container
+pct exec 100 -- apt update && apt upgrade -y
+
+# Docker images
+pct exec 100 bash
+cd /opt/media-stack
+docker compose pull
+docker compose up -d
+docker system prune -f
+
+# Host
+apt update && apt upgrade -y</pre>
+
+    <h2>Troubleshooting Chain</h2>
+    <ol>
+        <li>Physical - server powered, network up</li>
+        <li>Proxmox - Web UI accessible</li>
+        <li>Network - DHCP, DNS working</li>
+        <li>LXC Container - pct status 100 = running</li>
+        <li>Container Network - ping 8.8.8.8</li>
+        <li>Docker - docker ps shows containers</li>
+        <li>Jellyfin - http://192.168.86.46:8096</li>
+        <li>SAMBA - \\192.168.86.30\media</li>
+    </ol>
+
+</body>
+</html>

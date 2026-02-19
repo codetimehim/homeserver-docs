@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architecture - Proxmox Media Server</title>
+    <style>
+        :root {
+            --bg: #0d1117; --text: #c9d1d9; --heading: #f0f6fc;
+            --accent: #3fb950; --border: #30363d; --code-bg: #161b22; --link: #58a6ff;
+        }
+        * { margin: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg); color: var(--text); line-height: 1.7;
+            max-width: 900px; margin: 0 auto; padding: 2rem;
+        }
+        nav { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.5rem; margin-bottom: 2rem; }
+        nav a { color: var(--link); text-decoration: none; margin-right: 1.5rem; font-weight: 500; }
+        nav a:hover { text-decoration: underline; }
+        h1 { color: var(--heading); font-size: 2.2rem; margin-bottom: 0.5rem; border-bottom: 2px solid var(--accent); padding-bottom: 0.5rem; }
+        h2 { color: var(--heading); font-size: 1.6rem; margin: 2rem 0 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+        h3 { color: var(--heading); font-size: 1.3rem; margin: 1.5rem 0 0.8rem; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; overflow-x: auto; font-family: monospace; font-size: 0.85rem; }
+        code { background: var(--code-bg); padding: 0.2rem 0.4rem; border-radius: 4px; font-family: monospace; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { border: 1px solid var(--border); padding: 0.75rem; text-align: left; }
+        th { background: var(--code-bg); color: var(--heading); }
+        a { color: var(--link); }
+        .diagram { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="index.html">Hub</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="maintenance.html">Maintenance</a>
+        <a href="control.html">Control</a>
+    </nav>
+
+    <h1>Proxmox Media Server Architecture</h1>
+
+    <h2>Overview</h2>
+    <p>Complete guide to building a media server on Proxmox from bare metal to streaming.</p>
+
+    <div class="diagram">
+Bare Metal (Proxmox Host 192.168.86.30)
+├── LXC Container (ID 100, 192.168.86.46)
+│   ├── Docker
+│   └── Jellyfin (:8096)
+├── Cockpit (:9090)
+├── SAMBA Shares
+└── ZFS Pool (/tank)
+    </div>
+
+    <h2>Quick Reference</h2>
+    <table>
+        <tr><th>Service</th><th>URL</th><th>Description</th></tr>
+        <tr><td>Proxmox</td><td>https://192.168.86.30:8006</td><td>VM/Container management</td></tr>
+        <tr><td>Cockpit</td><td>https://192.168.86.30:9090</td><td>Linux admin UI</td></tr>
+        <tr><td>Jellyfin</td><td>http://192.168.86.46:8096</td><td>Media streaming</td></tr>
+        <tr><td>SAMBA</td><td>\\192.168.86.30\media</td><td>File shares</td></tr>
+    </table>
+
+    <h2>Phase 1: Proxmox Host Setup</h2>
+
+    <h3>Install Proxmox VE</h3>
+    <ol>
+        <li>Download ISO from <a href="https://proxmox.com">proxmox.com</a></li>
+        <li>Create bootable USB, boot server</li>
+        <li>Configure: hostname <code>pve</code>, IP <code>192.168.86.30/24</code></li>
+    </ol>
+
+    <h3>Post-Install</h3>
+    <pre>apt update && apt upgrade -y
+apt install -y cockpit samba zfsutils-linux
+systemctl enable --now cockpit.socket
+
+echo 'net.ipv4.ip_forward=1' > /etc/sysctl.d/99-forwarding.conf
+sysctl --system</pre>
+
+    <h3>ZFS Pool Setup</h3>
+    <pre>zpool create tank /dev/sdb
+zfs set mountpoint=/tank tank
+zfs set compression=zstd tank
+zfs create tank/media</pre>
+
+    <h3>SAMBA Configure</h3>
+    <pre>useradd -r -s /bin/false mediauser
+smbpasswd -a mediauser
+
+cat >> /etc/samba/smb.conf << 'EOF'
+[media]
+path = /tank/media
+browseable = yes
+read only = no
+guest ok = no
+valid users = mediauser
+EOF
+
+systemctl restart smbd</pre>
+
+    <h2>Phase 2: LXC Container</h2>
+
+    <h3>Create Container (CLI)</h3>
+    <pre>pct create 100 /var/lib/vz/template/cache/ubuntu-22.04-standard.tar.zst \
+  --hostname media-stack --memory 4096 \
+  --net0 name=eth0,bridge=vmbr0,ip=dhcp
+pct start 100</pre>
+
+    <h3>Mount ZFS to Container</h3>
+    <pre>pct set 100 -mp0 /tank/media,mp=/opt/media-stack/media-shared
+pct exec 100 ls /opt/media-stack/media-shared</pre>
+
+    <h3>Install Docker in Container</h3>
+    <pre>pct exec 100 bash
+apt update
+apt install -y curl ca-certificates gnupg
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list
+apt update
+apt install -y docker-ce docker-compose-plugin</pre>
+
+    <h2>Phase 3: Docker Stack</h2>
+
+    <h3>Jellyfin Compose</h3>
+    <pre>mkdir -p /opt/media-stack/config /opt/media-stack/media-shared
+
+cat > /opt/media-stack/docker-compose.yml << 'EOF'
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    network_mode: host
+    volumes:
+      - /opt/media-stack/config:/config
+      - /opt/media-stack/media-shared:/media:ro
+    restart: unless-stopped
+EOF
+
+cd /opt/media-stack
+docker compose up -d
+
+# Access: http://192.168.86.46:8096</pre>
+
+    <h2>Videos</h2>
+    <ul>
+        <li><a href="https://youtu.be/zLFB6ulC0Fg">Part 1: Hardware & Proxmox</a></li>
+        <li><a href="https://youtu.be/Uzqf0qlcQlo">Part 2: Apps & Docker</a></li>
+    </ul>
+
+</body>
+</html>
