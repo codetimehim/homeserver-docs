@@ -35,38 +35,35 @@
         .filter-card { border-left: 4px solid #2563eb; padding: 15px; margin-bottom: 12px; background: #f8fafc; border-radius: 0 8px 8px 0; }
         .filter-version { font-weight: 600; color: #2563eb; display: block; margin-bottom: 5px; }
         .filter-desc { color: #64748b; font-size: 0.9rem; }
-        .filters-applied { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-        .filter-tag { background: #dbeafe; color: #1e40af; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; }
         .insight-card { background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%); color: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; }
         .insight-title { font-size: 1rem; font-weight: 600; margin-bottom: 10px; }
         .insight-value { font-size: 1.8rem; font-weight: 700; margin-bottom: 5px; }
         .insight-context { font-size: 0.85rem; opacity: 0.9; }
         .monthly-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e2e8f0; }
-        .month-label { font-weight: 500; color: #374151; }
-        .month-stats { display: flex; gap: 20px; }
+        .month-name { font-weight: 500; color: #374151; }
+        .month-stats { display: flex; gap: 25px; }
         .month-stat { text-align: center; }
-        .month-stat-value { font-weight: 600; color: #1e40af; }
+        .month-stat-value { font-weight: 600; font-size: 1.1rem; color: #1e40af; }
         .month-stat-label { font-size: 0.7rem; color: #6b7280; }
         .back-link { display: inline-flex; align-items: center; color: #2563eb; text-decoration: none; font-size: 0.9rem; margin-bottom: 15px; }
         .back-link:hover { text-decoration: underline; }
         footer { margin-top: 30px; text-align: center; color: #999; font-size: 0.85rem; }
         @media (max-width: 600px) {
             .metric-grid { grid-template-columns: repeat(2, 1fr); }
-            .month-stats { gap: 10px; }
+            .month-stats { gap: 15px; }
             th, td { font-size: 0.8rem; padding: 8px 5px; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <a href="index.html" class="back-link">← Back to Hub</a>
-        
-        <h1>📈 MNQ Opening Range Breakout</h1>
+        <a href="index.html" class="back-link">Back to Hub</a>
+        <h1>MNQ Opening Range Breakout</h1>
         <p class="subtitle">Backtesting Results: Jan-Nov 2025 | Data Period: 10 months OHLCV 1-min</p>
 
-        <!-- V2.5 Summary Card -->
+        <!-- Summary Card -->
         <div class="insight-card">
-            <div class="insight-title">🎯 V2.5 Multi-Filter Strategy (Current Best)</div>
+            <div class="insight-title">V2.5 Multi-Filter Strategy (Current Best)</div>
             <div class="insight-value">+44.0% Win Rate | +$2,400 Total</div>
             <div class="insight-context">Up from 14.8% baseline • Profit Factor: 1.57 • 25 quality trades</div>
         </div>
@@ -74,7 +71,7 @@
         <!-- Strategy Comparison Table -->
         <div class="card">
             <div class="card-header">
-                <span class="card-icon">📊</span>
+                <span class="card-icon">&#128202;</span>
                 <h2 style="margin:0;border:none;padding:0;">Strategy Evolution Comparison</h2>
             </div>
             <table>
@@ -84,7 +81,7 @@
                         <th class="text-center">Win%</th>
                         <th class="text-center">PF</th>
                         <th class="text-center">Trades</th>
-                        <th class="text-right">Total P&L</th>
+                        <th class="text-right">Total P&amp;L</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -110,8 +107,8 @@
                         <td class="text-right metric-positive">+$300</td>
                     </tr>
                     <tr style="background:#eff6ff;font-weight:500;">
-                        <td><span class="badge badge-green">V2.5</span> +Vol & OR size filters ✓</td>
-                        <td class="text-center metric-positive" style="font-size:1.1rem;">44.0%</td>
+                        <td><span class="badge badge-green">V2.5</span> +Vol &amp; OR size filters</td>
+                        <td class="text-center metric-positive">44.0%</td>
                         <td class="text-center metric-positive">1.57</td>
                         <td class="text-center">25</td>
                         <td class="text-right metric-positive">+$2,400</td>
@@ -123,10 +120,14 @@
         <!-- Filter Breakdown -->
         <div class="card">
             <div class="card-header">
-                <span class="card-icon">🛡️</span>
+                <span class="card-icon">&#128737;</span>
                 <h2 style="margin:0;border:none;padding:0;">Filter Breakdown (V2.5)</h2>
             </div>
             
             <div class="filter-card">
                 <span class="filter-version">V2 Confirmation</span>
-                <span class="filter-desc
+                <span class="filter-desc">Wait for the candle AFTER breakout to close in breakout direction. Eliminates false breaks.</span>
+            </div>
+            
+            <div class="filter-card">
+                <span class="filter
